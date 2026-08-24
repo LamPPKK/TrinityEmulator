@@ -82,9 +82,11 @@ Purpose: Eliminate platform risks before committing to the multi-year implementa
 ### WSA source audit
 
 - Inventory the public `microsoft/WSA` repository and record that no shipping runtime/UI/integration implementation is available there.
+- Record WSA's documented DRM boundary: ClearKey/MPEG-DASH and software Widevine L3 available; hardware DRM unavailable. Confirm that the public WSA repo exposes no MediaDrm/Crypto HAL, CDM, provisioning, key-storage, secure-decoder, or protected-output implementation to port.
 - Diff `microsoft/WSA-Linux-Kernel` configs and patch history against the selected current Android common/GKI kernels for x86_64 and arm64.
 - Prototype only kernel changes that solve a measured requirement; record provenance, license, security status, upstream equivalent, and whether the change should be imported, reimplemented, or dropped.
 - Explicitly prohibit dependencies on extracted WSA MSIX binaries, guest images, undocumented protocols, or signing assets.
+- Prototype the same software-DRM capability class independently: AOSP MediaDrm/Crypto interfaces, ClearKey/MPEG-DASH baseline, licensed Widevine L3 CDM/provisioning, software-security-level reporting, non-secure MediaCodec/surface policy, license lifecycle, and truthful rejection of secure-buffer/L1/HDCP requirements.
 - Start from this preliminary disposition: retain WSA x64/arm64 configs as a checklist; consider only still-missing upstreamable Binder/security/scheduler fixes; reject the whole old kernel fork, legacy `ASHMEM`, and WSA-specific Hyper-V/`DXGKRNL` paths unless a new spike proves they fit the QEMU/Gfxstream architecture.
 
 ### Service-mode, GApps, and root-provider proof
@@ -137,7 +139,7 @@ Purpose: Eliminate platform risks before committing to the multi-year implementa
 - Baseline boot, graphics, memory, and latency measurements.
 - Risk register with owner and resolution date for every red item.
 - Exact pinned upstream versions and update policy.
-- WSA kernel reuse report with an explicit `import`, `reimplement`, or `drop` decision for every candidate change.
+- WSA kernel reuse report with an explicit `import`, `reimplement`, or `drop` decision for every candidate change, plus a WSA DRM behavior report proving that L3 is independently implemented and no WSA runtime/CDM/key material is reused.
 - Waydroid and LineageOS reuse reports with pinned revisions and per-change provenance/disposition.
 - GrapheneOS hardening report with pinned revisions, per-change provenance, AOSP-equivalent check, threat coverage, compatibility/performance evidence, and explicit exclusion list.
 - Zero-telemetry specification, first-party egress manifest, clean packet-capture evidence, local diagnostics/redaction design, and third-party/host-OS scope statement.
@@ -158,6 +160,7 @@ Purpose: Eliminate platform risks before committing to the multi-year implementa
 - No unresolved license blocker exists for the planned public preview.
 - `NoApp`, `microG`, and user-imported `GApps` pass provisioning, isolation, update, reset, and rollback tests; no package outside the microG allowlist can spoof a signature, and no user-imported proprietary GApps payload is present in public source, CI, or ordinary release artifacts. Certified partner payloads use a separate access-controlled licensed supply chain.
 - A certified `GApps + Off` target proceeds only with written partner approval and a feasible legitimate identity/attestation, Play Integrity, licensed Widevine, and banking test path; failed targets remain explicitly uncertified and make no protected-app claim.
+- The ClearKey/MPEG-DASH baseline passes; licensed Widevine L3 passes provisioning, streaming/offline license, CENC, decoder/surface, suspend/resume, reset/update, multi-instance isolation, and content-policy tests on every exposed target. Secure-buffer/L1 requests fail closed unless the separate hardware-DRM gate is approved.
 - `Off`, KernelSU, and Magisk pass their eligible target gates; root cannot grant a host capability, weaken AVB/SELinux, or leave a rooted artifact/state behind after selecting `Off`.
 - Native Bridge remains `Off` by default; each exposed provider passes legal review, import validation, self-tests, and the agreed ARM-app threshold.
 - Architecture review approves the shared-runtime approach.

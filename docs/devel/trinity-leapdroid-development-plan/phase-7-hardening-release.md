@@ -57,6 +57,7 @@ Purpose: Convert feature completeness into reliable supported releases.
 - Zero telemetry, local diagnostics/manual export, first-party egress disclosure, per-app Network/Sensors controls, and process sandbox status are release features, not experimental flags.
 - `NoApp` and `microG` flows are supported first; GApps and each root/Native Bridge provider-target combination graduate individually only after legal, build/provenance, security, recovery, update, telemetry, and compatibility thresholds pass.
 - A `CertifiedPartner + Off` beta additionally requires the agreed Play Integrity verdicts, legacy SafetyNet tests where applicable, licensed DRM security-level tests, regional banking blocking matrix, OTA/reprovisioning/key-rotation exercises, and rooted/tampered negative controls. Failure removes the certified label/SKU rather than weakening a verifier.
+- Licensed Widevine L3 graduates separately per host/ABI/edition/provider after ClearKey/MPEG-DASH, provisioning, streaming/offline licenses, CENC, renewal/release, key rotation, MediaCodec/surface, suspend/resume, update/reset, multi-instance isolation, output policy, revocation, secret-free diagnostics, and secure-buffer/L1 negative gates pass.
 - TV beta requires remote-only provisioning/recovery, 250-app results, stable host decode fallback, edition-safe updates, and published per-host media/input matrices.
 
 ### General Availability

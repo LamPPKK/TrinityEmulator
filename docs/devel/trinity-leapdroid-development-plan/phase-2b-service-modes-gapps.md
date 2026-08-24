@@ -36,6 +36,18 @@ Mode rules:
 - Keep anti-cheat, commercial streaming, and other protected-app results separately owned by each service. Official certification and a clean guest may improve compatibility but never override an app/server decision.
 - If licensing, certification, attestation provisioning, Widevine tier, or the banking blocking threshold is unavailable on a host/ABI, do not ship or label the `CertifiedPartner` variant there. Retain `UserImport` as an explicitly uncertified Developer option and publish the failed gate.
 
+## WSA-referenced Widevine L3 path
+
+- Use the public WSA roadmap as the Windows behavior target: ClearKey/MPEG-DASH and software Widevine L3 are supported; hardware DRM is not. WSA's public repositories do not contain the runtime DRM implementation, so no WSA binary, guest image, CDM, device blob, keybox, provisioning response, or undocumented protocol is an implementation input.
+- Implement the path independently through Android's MediaDrm/Crypto framework and HAL/service contracts. Integrate the Widevine CDM, provisioning, certificates, license policy, update channel, and test material only from the approved Widevine/GMS partner supply chain.
+- Start with ClearKey and standards-based MPEG-DASH/CENC plumbing as a source-available functional baseline. Then add a software-security-level Widevine L3 provider behind the same versioned guest contract; report the actual security level to applications without property overrides or spoofing.
+- Keep CDM parsing/decryption and license state in a dedicated SELinux-confined guest service. Bind storage to the instance/user/provider/build, encrypt it at rest where the partner design permits, exclude secrets and decrypted samples from logs/diagnostics/snapshots, and erase/rotate state under the licensed reset/update policy.
+- Route only policy-approved non-secure decoded output through the normal guest MediaCodec/Gfxstream or host-decode surface path. If a license or application requires secure buffers, hardware-backed keys, trusted decode, HDCP, or Widevine L1, reject it truthfully; never downgrade the requested protection silently.
+- On Windows, WSA defines expected L3 behavior but contributes no code. On macOS, reuse the same guest MediaDrm/Crypto/provider contract with the licensed CDM; do not copy Windows Edge's Widevine CDM or attempt to route Android licenses through a browser CDM.
+- Classify provisioning and license-server traffic as third-party functional DRM traffic, not Trinity/LeapDroid telemetry. Maintain endpoint ownership, user-visible DRM state, bounded local errors, offline behavior, and zero secret/token/content logging.
+- Validate provisioning, streaming and offline licenses where licensed, renewal/release, CENC `cenc`/`cbcs` combinations supported by the target Android release, key rotation, clock/network change, suspend/resume, app/guest update, reset, multi-instance isolation, decoder crash, output-resolution policy, and server revocation using approved test content/accounts.
+- Treat Widevine L1/hardware DRM as a later, separate `CertifiedPartner + Off` path requiring OEMCrypto/chipset or equivalent approved TEE, secure decode/render, protected memory, output protection/HDCP, robustness review, and partner certification. WSA L3 is not evidence that those requirements are met.
+
 ## Shared base and add-on architecture
 
 - Build one signed AOSP base per edition and ABI. Keep host integration agents, framework contracts, kernel/vendor configuration, SELinux base policy, and update logic identical across service modes.
@@ -104,6 +116,7 @@ Mode rules:
 - **Guest security:** AVB/dm-verity, SELinux enforcing, exact privileged-permission deltas, Binder/file/socket isolation, per-app Network/Sensors denial, account/token non-export, safe mode, and no signature-spoof access outside approved microG identities.
 - **Compatibility:** boot, provisioning, app install/update, sign-in where legally testable, notifications, clipboard redaction, backup disclaimers, base OTA, package update, Gfxstream/ANGLE, Native Bridge combinations, Desktop windows, and TV D-pad/media behavior.
 - **Certified provider:** `RootMode=Off` absence, locked boot chain, exact certified build/patch level, partner-provisioned identity, official Play Integrity server verification, legacy SafetyNet where still available, licensed Widevine security-level/secure-path tests, banking blocking suite, factory reset, OTA, rollback, snapshot restrictions, and rooted/tampered negative controls.
+- **WSA-class L3:** ClearKey/MPEG-DASH, licensed CDM/provisioning provenance, honest software security level, streaming/offline license lifecycle, CENC, non-secure decoder/surface path, multi-instance key isolation, secret-free diagnostics, output-policy enforcement, and secure-buffer/L1 negative tests.
 - **Privacy:** dependency/endpoint scan plus packet captures for fresh boot, idle, account signed out/in, store idle/update, app launch, induced crash, diagnostics export, suspend/resume, and deletion. Results classify first-party, mode-provider, user-app, and host-OS traffic separately.
 - CI uses synthetic signed GApps-like fixtures for importer/parser/security tests. Proprietary packages never enter public CI artifacts, logs, caches, test reports, or repositories; any private legal compatibility test remains access-controlled and produces only non-content results.
 
@@ -113,6 +126,7 @@ Mode rules:
 - Payload-free `GAppsProvider` format, import threat model, sandbox/capability specification, synthetic corpus, and negative-test plan.
 - Legal/product review covering import UX, absence of redistribution/download assistance, certification language, privacy disclosure, trademarks, and support boundaries.
 - Conditional certified-provider program plan covering partner ownership, GMS/Play Protect approvals, attestation provisioning, Play Integrity verdict contract, SafetyNet legacy disposition, Widevine license/security level/secure media path, banking test governance, incident response, and per-target go/no-go evidence.
+- WSA Widevine L3 behavior ledger and independent AOSP MediaDrm/Crypto architecture covering provider/CDM boundary, provisioning/license flow, instance-bound storage, decoder/surface routing, update/revocation, privacy, test content, and explicit exclusions.
 - Mode-specific provisioning, settings, migration, deletion, update, rollback, diagnostics, and recovery UX specifications for Windows and macOS Desktop/TV.
 - Compatibility and egress matrices for `NoApp`, `microG`, and every separately accepted GApps provider/Android/ABI/edition combination.
 
@@ -136,3 +150,5 @@ Mode rules:
 - SafetyNet Attestation deprecation notice: https://developer.android.com/privacy-and-security/safetynet
 - Widevine DRM overview and device integration boundary: https://developers.google.com/widevine/drm/overview
 - Widevine partner access and L1 OEMCrypto requirement: https://developers.google.com/widevine/access
+- Microsoft WSA public capability roadmap (software Widevine L3 available; hardware DRM unavailable): https://github.com/microsoft/WSA/
+- Microsoft WSA Linux kernel source (kernel-only reuse input): https://github.com/microsoft/WSA-Linux-Kernel
