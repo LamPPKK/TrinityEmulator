@@ -36,9 +36,13 @@ Checkboxes describe implementation and release status on `main`. An item is chec
 - [ ] Build separate Desktop and Android TV images over a shared system/vendor base.
 - [ ] Implement boot, stop, reset, suspend/resume, snapshots, storage quotas, and multi-instance lifecycle.
 - [ ] Support APK install/uninstall, package discovery, host launcher registration, deep links, and opt-in ADB.
-- [ ] Do not bundle GApps, Google Play Store, Google Play Services, or other proprietary Google system packages.
-- [ ] Preinstall F-Droid from a verified official release and enable only its official repository by default.
-- [ ] Add an optional microG profile with restricted signature spoofing and independently controlled services.
+- [ ] Implement exactly three immutable service modes: `NoApp` (clean AOSP, default), `microG` (verified F-Droid + approved microG), and `GApps` (advanced user import).
+- [ ] Keep GApps, Google Play Store/Services, and other proprietary Google system packages out of source, CI, and release artifacts; never search for or download them, and accept only a compatible package explicitly selected by the user.
+- [ ] Build the GApps importer as a sandboxed, transactional, payload-free provider with validation, sealed read-only add-on storage, rollback, mode isolation, and a permanent uncertified/best-effort label.
+- [ ] Restrict microG signature spoofing to pinned identities and make device registration, Cloud Messaging, location, and network access independently controlled.
+- [ ] Implement independent `RootMode=Off|KernelSU|Magisk`; default to `Off`, build rooted Developer artifacts reproducibly from pinned source, and keep providers mutually exclusive.
+- [ ] Add default-deny root grants, authenticated management, module safe mode, host-owned recovery, update/rollback, and clean-absence tests; provide no concealment or attestation/DRM/banking/anti-cheat bypass features.
+- [ ] Target-gate KernelSU on Windows x64 and do not ship it when the pinned version requires disabling syscall hardening; keep Magisk Zygisk off by default.
 - [ ] Detect APK ABI before install and report `native`, `translatable`, or `unsupported`.
 - [ ] On Windows x64, support user-imported Houdini or `libndk_translation` providers through two payload-free adapters; do not bundle or download proprietary binaries.
 - [ ] Maintain CTS, VTS, compatibility, upgrade, and real-application test matrices for every guest SKU.
@@ -81,7 +85,7 @@ Checkboxes describe implementation and release status on `main`. An item is chec
 
 1. [Phase 0 — decision and feasibility gates](docs/devel/trinity-leapdroid-development-plan/phase-0-decision-gates.md)
 2. [Phase 1 — shared runtime foundation](docs/devel/trinity-leapdroid-development-plan/phase-1-runtime-foundation.md)
-3. [Phase 2 — Android guest](docs/devel/trinity-leapdroid-development-plan/phase-2-android-guest.md) and [Phase 2A — Android TV](docs/devel/trinity-leapdroid-development-plan/phase-2a-android-tv.md)
+3. [Phase 2 — Android guest](docs/devel/trinity-leapdroid-development-plan/phase-2-android-guest.md), [Phase 2A — Android TV](docs/devel/trinity-leapdroid-development-plan/phase-2a-android-tv.md), [Phase 2B — service modes/GApps](docs/devel/trinity-leapdroid-development-plan/phase-2b-service-modes-gapps.md), and [Phase 2C — root providers](docs/devel/trinity-leapdroid-development-plan/phase-2c-root-providers.md)
 4. [Phase 3 — graphics](docs/devel/trinity-leapdroid-development-plan/phase-3-graphics.md)
 5. [Phase 4 — seamless windows](docs/devel/trinity-leapdroid-development-plan/phase-4-seamless-windows.md), [input](docs/devel/trinity-leapdroid-development-plan/phase-4a-input-cursor-controller.md), and [native app/display profiles](docs/devel/trinity-leapdroid-development-plan/phase-4b-native-app-experience-display-profiles.md)
 6. [Phase 5 — host integration](docs/devel/trinity-leapdroid-development-plan/phase-5-host-integration.md) and [clipboard/notifications](docs/devel/trinity-leapdroid-development-plan/phase-5a-clipboard-notifications.md)

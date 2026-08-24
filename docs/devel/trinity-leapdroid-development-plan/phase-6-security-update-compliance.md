@@ -5,8 +5,8 @@ Purpose: Make the subsystem distributable and supportable rather than merely fun
 
 ## Security architecture
 
-- Threat-model guest apps, compromised Android system services, malformed graphics/control streams, hostile APKs, network attackers, local unprivileged users, update compromise, and supply-chain compromise.
-- Run VM controller, GPU renderer, media, integration brokers, Native Bridge inspection, diagnostics, updater, and UI with the minimum privileges and explicit capability-based IPC ACLs. Follow the per-platform process matrix in Phase 6A.
+- Threat-model guest apps, compromised Android system services, malformed graphics/control streams, hostile APKs, user-selected GApps/Native Bridge archives, rooted guest services/modules, network attackers, local unprivileged users, update compromise, and supply-chain compromise.
+- Run VM controller, GPU renderer, media, integration brokers, Native Bridge/GApps/root-artifact inspection, root recovery, diagnostics, updater, and UI with the minimum privileges and explicit capability-based IPC ACLs. Follow the per-platform process matrix in Phase 6A.
 - Apply Windows restricted tokens/AppContainer where compatible, Job Objects and process mitigations; apply macOS App Sandbox/Hardened Runtime/XPC where compatible. Enforce process/resource limits, memory and message quotas, watchdogs, egress rules, and crash containment.
 - Require bounds-checked generated codecs for new protocols; fuzz all guest-controlled parsers continuously.
 - Enforce SELinux, AVB, signed boot/system images, encrypted or host-protected userdata, secure key storage, and production ADB policy.
@@ -21,9 +21,9 @@ Purpose: Make the subsystem distributable and supportable rather than merely fun
 
 - Production binaries and guest images contain no analytics SDK, automatic crash uploader, remote logger, usage collector, experimentation client, stable installation/device tracking ID, or undocumented metrics endpoint. This is a mandatory build policy, not a user opt-out.
 - Keep diagnostics in bounded local ring buffers and host-protected crash storage. Apply retention/size caps, secret/content redaction, a user-facing viewer, and a preview step before explicit manual export; no background export or automatic support upload exists.
-- Maintain a machine-readable first-party egress manifest for each artifact. Signed static update metadata/packages, F-Droid sync, explicitly enabled microG services, user apps, and user-configured DNS/time/connectivity/location are functional traffic and must be independently switchable/auditable.
+- Maintain a machine-readable first-party egress manifest for each artifact. Signed static updates, F-Droid/explicitly enabled microG, user-installed GApps, rooted apps/modules, ordinary user apps, and user-configured DNS/time/connectivity/location are distinct functional traffic classes and must be independently auditable.
 - Update checks use no stable installation/device ID, tracking cookie, or per-device query parameter. Support offline/enterprise update and host-provided or user-configured time/connectivity behavior.
-- Release packet captures cover boot, idle, app launch, induced crash, update, suspend/resume, and shutdown with microG/F-Droid/connectivity features both disabled and enabled. Any undocumented first-party destination or telemetry request blocks release.
+- Release packet captures cover boot, idle, app launch, induced crash, update, suspend/resume, and shutdown across every eligible service/root combination and connectivity state. Any undocumented first-party destination or telemetry request blocks release.
 - Document that third-party Android apps and Windows/macOS are separate trust domains. Provide per-app guest Network permission and optional default-deny templates, but do not promise to eliminate traffic outside the product's own components.
 
 ## Update system
@@ -46,12 +46,15 @@ Purpose: Make the subsystem distributable and supportable rather than merely fun
 - Run Android clipboard privacy/current-focus/system-agent tests and notification-listener/action/RemoteInput/visibility tests; run host permission, DND, lock/privacy, own-notification reconciliation, parser-fuzz, flood and multi-instance isolation suites.
 - Advertise only codecs/profiles/levels, resolutions, refresh rates, audio layouts, and HDR modes proven on the relevant host. Protected-content capabilities remain absent unless a separate licensed design is approved.
 
-## Service and Native Bridge security
+## Service modes, root, and Native Bridge security
 
+- Prove `NoApp` and `Off` package/file/permission/egress absence. Treat `ServiceMode` and `RootMode` as signed immutable instance metadata; changes create/clone to a new instance and never migrate service accounts, credentials, tokens, system packages, root grants, or modules.
 - Pin and verify microG and F-Droid source/release provenance, APK signing certificates, license texts, update channels, and SBOM entries.
 - Keep microG and F-Droid in ordinary app sandboxes. Restrict microG signature spoofing to exact pinned identities; do not grant F-Droid a privileged installer identity without the separate signer-restricted review.
 - Test that signature spoofing is impossible outside the exact approved microG packages/certificates and cannot be enabled by a user-installed APK.
 - Treat F-Droid repositories as separate trust roots; verify signed indexes and APK hashes, require explicit confirmation for new repositories/keys, and prevent host catalog code from bypassing client verification.
+- Treat a user-selected GApps package as hostile proprietary input: validate it in a no-network sandbox, retain original APK signatures, allowlist the descriptor/files/privilege delta, construct a sealed read-only add-on, preserve AVB/SELinux, and fail transactionally to the clean base. Never mix it with microG or describe it as certified.
+- Pin KernelSU/Magisk source and licenses, build each root artifact reproducibly, preserve AVB/dm-verity and SELinux, default-deny grants, authenticate management, and treat every module as arbitrary guest-root code. Keep Zygisk off by default; prohibit concealment and attestation/DRM/banking/anti-cheat bypass features. KernelSU x86_64 remains unavailable if its pinned version requires weaker syscall hardening.
 - Treat imported Native Bridge files as untrusted proprietary code: inspect in a sandbox, scan on the host, validate an allowlisted manifest/hash when available, mount read-only, isolate caches, keep payload data/results local, and support immediate disable/rollback.
 - Publish a support matrix per provider/Android version/ABI. A provider compatibility failure must degrade to native x86_64 operation, never relax AVB, SELinux, or linker namespace policy.
 
@@ -59,8 +62,9 @@ Purpose: Make the subsystem distributable and supportable rather than merely fun
 
 - Maintain machine-readable license metadata and SBOM for every host and guest artifact.
 - Satisfy QEMU GPL source distribution requirements and keep proprietary/Apache host UI components clearly separated.
-- Do not distribute OpenGApps, Play Store, GMS, Widevine, Houdini, `libndk_translation`, proprietary codecs, or any other proprietary ARM translator without written redistribution rights.
+- Do not distribute GApps packages, Play Store, GMS, Widevine, Houdini, `libndk_translation`, proprietary codecs, or any other proprietary ARM translator without written redistribution rights. The GApps provider does not search, download, mirror, or extract them and does not grant certification or license rights.
 - Distribute F-Droid Client under GPL-3.0-or-later obligations and microG under its Apache-2.0 terms; include notices, corresponding source links/offers as applicable, signing provenance, and update policy.
+- Satisfy the pinned KernelSU and Magisk GPL obligations for every distributed source-built component, including notices, corresponding source/source offers, reproducible build inputs, local patches, and module-manager provenance; do not bundle unreviewed third-party modules.
 - User import is not proof of legal entitlement. Require an acknowledgement and legal review of the product workflow; do not provide download URLs, extraction automation, or instructions that bypass vendor terms.
 - Review every imported Waydroid and LineageOS change independently; preserve commit/license provenance and keep GPL Waydroid host code behind compliant source/process boundaries.
 - Review every GrapheneOS-derived change independently against current AOSP; preserve commit/license provenance, security rationale, compatibility/performance evidence, and removal condition. Do not use GrapheneOS trademarks or imply equivalent security.
@@ -73,6 +77,7 @@ Purpose: Make the subsystem distributable and supportable rather than merely fun
 - Release candidate meets defined CTS/VTS/graphics pass thresholds.
 - Complete SBOM, notices, source offers, privacy documentation, and support lifecycle exist.
 - Each exposed Native Bridge provider has an approved legal disposition and technical support matrix; otherwise it is hidden/disabled in production.
+- Each exposed service/root combination passes provenance, absence, privilege, import/build, isolation, recovery, update/rollback, telemetry, and compatibility gates; a failed provider/target remains hidden without blocking `NoApp + Off`.
 - Desktop and TV artifacts have separate signed manifests and migration paths; edition cross-install and userdata conversion tests fail closed.
 - No release path captures ordinary input outside the focused product window, logs text/key content, leaves pointer capture active, or allows haptics/held keys to survive focus loss, device removal, suspend, reset, or crash.
 - No release path reads clipboard history, exports sensitive clips automatically, requests unrelated host notifications, logs clipboard/notification/reply content, executes stale actions, or crosses host/Android users or instances.

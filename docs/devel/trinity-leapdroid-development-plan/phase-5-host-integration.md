@@ -12,8 +12,8 @@ Purpose: Reach the practical desktop-integration level users associate with WSA.
 - Android intents mapped to host links, files, and share targets; host links optionally routed into Android apps.
 - Audio output/input, camera, location, Phase 4A input/controller state, and selected virtual sensors.
 - Developer mode with paired ADB, local log collection, port forwarding, and previewable/redacted diagnostic bundles exported only by explicit user action.
-- Surface F-Droid app/update state in the shared app catalog without reimplementing or bypassing F-Droid repository-signature verification.
-- Expose the Core/Compatible microG profile and its network-service toggles with clear privacy explanations and current self-check status.
+- Expose immutable `ServiceMode=NoApp|microG|GApps` during instance creation. Surface F-Droid state and microG opt-ins only in `microG`; provide a user-file picker, inspection result, license/certification warning, progress, restart, rollback, and removal UX for the payload-free GApps provider.
+- Expose independent `RootMode=Off|KernelSU|Magisk` under Advanced/Developer with a persistent rooted warning, default-deny grant queue, provider/manager/build provenance, module safe mode, host-owned recovery, and one-click boot to clean `Off` recovery—not root concealment or bypass controls.
 - Add edition-aware instance creation and management. Desktop and TV receive separate userdata, shortcuts, update channels, settings surfaces, and compatibility reporting.
 - Add a native per-app settings surface shared at the policy/schema level but rendered with WinUI 3 on Windows and SwiftUI/AppKit on macOS. Expose Auto/Phone/Tablet first, hide risky compatibility overrides under Advanced, show the effective dp/orientation/profile, and provide preview/relaunch/reset/last-known-good recovery.
 - For TV, provide one remote-friendly full-screen/windowed display, display-profile selector, D-pad/gamepad/media-key routing, push-to-talk, playback sleep policy, and a host recovery overlay.
@@ -22,7 +22,7 @@ Purpose: Reach the practical desktop-integration level users associate with WSA.
 
 - C++/WinRT and WinUI 3 settings/control center.
 - Native x64 and ARM64 binaries for UI, services, VM controller, renderer, updater, and diagnostics.
-- Isolate the control-center UI, per-task AppShell/presentation brokers, VM controller, renderer, media/decoders, updater, diagnostics, clipboard, notifications, files, camera/microphone/location, and Native Bridge inspection with restricted tokens, AppContainer/LPAC where compatible, Job Objects, narrow IPC ACLs, process mitigations, and per-process egress rules.
+- Isolate the control-center UI, per-task AppShell/presentation brokers, VM controller, renderer, media/decoders, updater, diagnostics, clipboard, notifications, files, camera/microphone/location, and Native Bridge/GApps/root-artifact inspection with restricted tokens, AppContainer/LPAC where compatible, Job Objects, narrow IPC ACLs, process mitigations, and per-process egress rules.
 - MSIX bundle with architecture-specific payloads, clean uninstall, repair, and signed update channels.
 - Windows App SDK notifications with stable tag/group/ID and own-notification enumeration/removal; Win32 clipboard listener/format conversion; one real AppWindow/HWND per Android task; native title bar/system menu/Snap/Alt+Tab; per-app icon, AppUserModelID, Start/Search shortcut and activation; URI/file associations; per-monitor DPI; virtual-desktop behavior; power notifications; and Windows permission prompts.
 - WASAPI audio, Media Foundation camera/video paths where appropriate, Windows location, clipboard, foreground Raw Input keyboard/mouse, GameInput controllers/haptics, native text-service integration, cursor/capture, and accessibility adapters.
@@ -35,7 +35,7 @@ Purpose: Reach the practical desktop-integration level users associate with WSA.
 
 - Swift/SwiftUI settings and launcher with AppKit windows for performance-sensitive presentation.
 - Native arm64 VM controller, renderer, updater, diagnostics, and Objective-C++ adapters.
-- Isolate the control-center UI, per-task AppShell/presentation brokers, VM controller, renderer, media/decoders, updater, diagnostics, clipboard, notifications, files, camera/microphone/location, and import inspection into least-entitled App Sandbox/XPC processes where compatible; use Hardened Runtime and security-scoped bookmarks, and document every unavoidable entitlement exception.
+- Isolate the control-center UI, per-task AppShell/presentation brokers, VM controller, renderer, media/decoders, updater, diagnostics, clipboard, notifications, files, camera/microphone/location, and Native Bridge/GApps/root-artifact import inspection into least-entitled App Sandbox/XPC processes where compatible; use Hardened Runtime and security-scoped bookmarks, and document every unavoidable entitlement exception.
 - Signed, notarized app bundle with hardened runtime and required hypervisor/virtualization entitlements.
 - NSWindow/CAMetalLayer presentation with native traffic-light controls, menu bar/Window menu/Services/Cmd commands, Spaces/fullscreen, Retina scaling and restoration; Dock/LaunchServices plus local Spotlight/`NSUserActivity` activation; capability-gated signed launcher shims for separate per-package Dock identity; UserNotifications notification/action/reply/dismiss adapter; NSPasteboard change/access adapter; file-provider/security-scoped bookmarks; CoreAudio, AVFoundation, CoreLocation, AppKit/NSTextInputClient keyboard/mouse/IME/cursor capture, GameController controllers/haptics, and accessibility adapters.
 - Host sleep/wake, display changes, thermal pressure, memory pressure, and app termination coordination.
@@ -57,7 +57,7 @@ Purpose: Reach the practical desktop-integration level users associate with WSA.
 - Native packages meet signing, notarization/store, update, repair, and uninstall requirements.
 - No integration requires disabling host security features.
 - Privacy settings are enforced across guest restart and product update.
-- Disabling microG stops its opted-in network functions, and switching/removing an ARM provider cannot leave advertised ABIs or translated-code caches behind.
+- All service/root choices, warnings, imports, opt-ins, grant queues, safe mode, rollback, and recovery work natively on both hosts; `NoApp + Off` contains no provider residue, disabling microG stops its opted-in network functions, and switching/removing an ARM provider leaves no advertised ABI or translated-code cache behind.
 - Desktop and TV packages can coexist, update, recover, and uninstall without crossing userdata or edition policy.
 - Input backends, IME, pointer capture/recovery, native cursor synchronization, eight-controller hot-plug, and basic haptics pass the Phase 4A matrix on each host architecture.
 - Clipboard and notifications pass the Phase 5A loop, redaction, reconciliation, permission, stale-action, restart, latency, and energy gates on every host architecture and edition.

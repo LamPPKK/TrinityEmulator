@@ -58,16 +58,16 @@ Purpose: Eliminate platform risks before committing to the multi-year implementa
 - Pin the current GrapheneOS manifest and relevant forks against the selected AOSP tag. Inventory hardened SELinux/seccomp policy, secure app spawning, `hardened_malloc`, zero-on-free, dynamic-code/JIT restrictions, Network/Sensors permission controls, local log viewer, Storage Scopes, and Contact Scopes.
 - For each candidate, record source commit, license, current-AOSP equivalent, guest/host threat addressed, CTS/VTS/app-compatibility impact, CPU/memory/startup/frame-time cost, test, rollback, and `import`, `reimplement`, `defer`, or `drop` decision.
 - Prioritize SELinux/seccomp tightening, per-app Network/Sensors controls, local log/crash viewing, and targeted allocator/memory hardening for high-risk native processes. Evaluate Storage/Contact Scopes after the base permission controls stabilize.
-- Explicitly reject the whole GrapheneOS manifest as the product base, GrapheneOS network infrastructure as a dependency, Sandboxed Google Play, Pixel firmware/radio/USB/attestation code, GrapheneOS branding, and claims of equal security.
-- Prove that microG and F-Droid remain ordinary sandboxed apps. Signature spoofing is limited to pinned microG identities; F-Droid receives no privileged installer role unless its separate review passes.
+- Explicitly reject the whole GrapheneOS manifest as the product base, GrapheneOS network infrastructure as a dependency, copying GrapheneOS Sandboxed Google Play implementation/services, Pixel firmware/radio/USB/attestation code, GrapheneOS branding, and claims of equal security. The separate user-supplied GApps provider must not inherit GrapheneOS security claims.
+- Prove that microG and F-Droid remain ordinary sandboxed apps in `ServiceMode=microG`. Signature spoofing is limited to pinned microG identities; F-Droid receives no privileged installer role unless its separate review passes.
 
 ### Zero-telemetry and layered host sandbox proof
 
 - Define a production build profile with no analytics SDK, crash uploader, usage tracking, remote logging, experiments, stable installation/device ID, or undocumented metrics endpoint. Development instrumentation must be compile-time or locally policy-gated and absent from production artifacts.
 - Define bounded local ring-buffer logs, health counters, trace sessions, crash artifacts, user-facing preview/redaction, retention/size caps, and manual export. Prove that induced crashes never upload automatically.
-- Produce a machine-readable first-party egress manifest separating signed update/F-Droid/opt-in microG/user-app traffic from telemetry. Packet-capture boot, idle, app launch, crash, update, suspend/resume, and shutdown with optional services both disabled and enabled.
+- Produce a machine-readable first-party egress manifest separating signed update, F-Droid/opt-in microG, user-installed GApps, rooted apps/modules, and ordinary user-app traffic from telemetry. Packet-capture boot, idle, app launch, crash, update, suspend/resume, and shutdown across all eligible `ServiceMode`/`RootMode` combinations.
 - Prototype static signed update metadata without stable identifiers, per-device query parameters, or tracking cookies. Prove offline/enterprise update and disabled or user-configured connectivity/time services.
-- Freeze the process/privilege map for UI, VM controller, renderer, media, clipboard, notifications, files, camera/microphone/location, updater, diagnostics, and Native Bridge inspection. Each broker gets a narrow authenticated IPC contract, explicit file/network/device capabilities, quotas, and crash boundary.
+- Freeze the process/privilege map for UI, VM controller, renderer, media, clipboard, notifications, files, camera/microphone/location, updater, diagnostics, Native Bridge inspection, GApps import, and root-artifact inspection/recovery. Each broker gets a narrow authenticated IPC contract, explicit file/network/device capabilities, quotas, and crash boundary.
 - Windows: prototype restricted tokens plus AppContainer/LPAC where compatible, Job Objects, process mitigations, IPC ACLs, and per-process firewall policy. macOS: prototype App Sandbox, Hardened Runtime, least entitlements, security-scoped bookmarks, and per-capability XPC helpers; record HVF/hypervisor and JIT/dynamic-code conflicts.
 - A/B measure every hardening layer for startup, app launch, UI jank, input latency, broker IPC, CPU, memory, energy, and long-play TV behavior. If a gate fails, optimize first, then narrow protection to the high-risk process or define a per-app compatibility exception with owner/expiry.
 
@@ -87,11 +87,12 @@ Purpose: Eliminate platform risks before committing to the multi-year implementa
 - Explicitly prohibit dependencies on extracted WSA MSIX binaries, guest images, undocumented protocols, or signing assets.
 - Start from this preliminary disposition: retain WSA x64/arm64 configs as a checklist; consider only still-missing upstreamable Binder/security/scheduler fixes; reject the whole old kernel fork, legacy `ASHMEM`, and WSA-specific Hyper-V/`DXGKRNL` paths unless a new spike proves they fit the QEMU/Gfxstream architecture.
 
-### microG and F-Droid proof
+### Service-mode, GApps, and root-provider proof
 
-- Build F-Droid Client and microG packages from pinned official sources or verify official prebuilt signatures and reproducibility metadata.
-- Prove a signer- and package-restricted signature-spoofing implementation on the candidate AOSP baseline; confirm no unrelated package can request or receive spoofed identity.
-- Test Core and Compatible provisioning, microG self-check, device-registration/Cloud Messaging opt-ins, F-Droid signed-index verification, installation confirmation, updates, disable, and factory reset.
+- Prove immutable `ServiceMode=NoApp|microG|GApps`, default `NoApp`, cross-mode package/account/token absence, clone-to-switch semantics, and a host APK installer in every mode.
+- Build F-Droid Client and microG packages from pinned official sources or verify official prebuilt signatures and reproducibility metadata. Prove signer/package-restricted signature spoofing and test microG self-check, service opt-ins, F-Droid verification, updates, disable, and reset.
+- Prototype the payload-free GApps provider with synthetic/free fixtures only: sandboxed local import, strict descriptor/content/signature/hash/privilege validation, sealed read-only add-on, AVB/SELinux preservation, transactional boot health, rollback, removal, and an uncertified/best-effort UX.
+- Prove immutable `RootMode=Off|KernelSU|Magisk`, default `Off`, reproducible separate boot/kernel artifacts, default-deny grants, safe mode/recovery, clean absence, and host/VM boundary preservation. Target-gate KernelSU x86_64 if syscall hardening would be weakened; keep Magisk Zygisk off by default.
 - Review the current F-Droid Privileged Extension before allowing unattended installs; default to Android user-confirmed installation if the review is not complete.
 
 ### Windows x64 Native Bridge proof
@@ -124,7 +125,7 @@ Purpose: Eliminate platform risks before committing to the multi-year implementa
 ### Legal and product proof
 
 - Produce a dependency license matrix and identify source-offer obligations.
-- Freeze F-Droid/microG packaging and privacy policy, F-Droid install privilege level, codecs/DRM scope, and user-supplied ARM-on-x64 provider policy.
+- Freeze `ServiceMode`/GApps import and `RootMode` policy, F-Droid/microG packaging/privacy, F-Droid install privilege level, codecs/DRM scope, and user-supplied ARM-on-x64 provider policy.
 - Freeze Desktop/TV instance separation, TV launcher source, media codec scope, supported display profiles, and staged Desktop-before-TV release order.
 - Freeze minimum host OS versions and first-release feature tier.
 
@@ -140,8 +141,8 @@ Purpose: Eliminate platform risks before committing to the multi-year implementa
 - GrapheneOS hardening report with pinned revisions, per-change provenance, AOSP-equivalent check, threat coverage, compatibility/performance evidence, and explicit exclusion list.
 - Zero-telemetry specification, first-party egress manifest, clean packet-capture evidence, local diagnostics/redaction design, and third-party/host-OS scope statement.
 - Windows and macOS process-sandbox matrix with tokens/entitlements, IPC ACLs, file/network/device access, resource limits, crash boundary, and measured overhead.
-- Android TV feasibility report covering launcher/SystemUI, D-pad focus, F-Droid, media, 1080p/4K presentation, accessibility, and DRM limitations.
-- microG/F-Droid threat model and compatibility report; Houdini/`libndk_translation` legal and technical feasibility reports without redistributing their payloads.
+- Android TV feasibility report covering launcher/SystemUI, D-pad focus, per-mode app discovery, media, 1080p/4K presentation, accessibility, and DRM limitations.
+- Service-mode/GApps and KernelSU/Magisk threat, legal, build, recovery, compatibility, and release-gate reports; Houdini/`libndk_translation` legal and technical feasibility reports without redistributing proprietary payloads.
 - Input architecture ADR, event/latency traces, shortcut precedence table, cursor-ownership proof, controller mapping format, privacy threat model, and representative hardware results.
 - Clipboard/notification architecture ADR, normalized schemas, permission/consent UX, platform capability matrix, loop/reconciliation model, security threat model, latency/energy results, and content/action fuzz plan.
 - Native-shell ADR covering real host window/process ownership, Windows AppUserModelID/activation, macOS Dock-identity disposition, platform command/lifecycle mapping, accessibility, and the boundary between native chrome and Android app content.
@@ -154,7 +155,8 @@ Purpose: Eliminate platform risks before committing to the multi-year implementa
 - One Android guest design and one host/guest protocol direction are approved.
 - Desktop and TV products boot on all committed architecture pairs, use separate userdata, and share the approved system/vendor/runtime foundation.
 - No unresolved license blocker exists for the planned public preview.
-- Core and Compatible service profiles pass provisioning/security tests, and no package outside the microG allowlist can spoof a signature.
+- `NoApp`, `microG`, and user-imported `GApps` pass provisioning, isolation, update, reset, and rollback tests; no package outside the microG allowlist can spoof a signature, and no proprietary GApps payload is present in source, CI, or release artifacts.
+- `Off`, KernelSU, and Magisk pass their eligible target gates; root cannot grant a host capability, weaken AVB/SELinux, or leave a rooted artifact/state behind after selecting `Off`.
 - Native Bridge remains `Off` by default; each exposed provider passes legal review, import validation, self-tests, and the agreed ARM-app threshold.
 - Architecture review approves the shared-runtime approach.
 - The input proof has one authoritative backend per device class, no duplicate IME characters, safe pointer-capture recovery, Android-standard gamepad mappings, bounded 8,000 Hz behavior, and measured latency breakdowns.

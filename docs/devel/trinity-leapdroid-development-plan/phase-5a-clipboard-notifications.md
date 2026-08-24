@@ -98,7 +98,7 @@ Purpose: Synchronize the current clipboard and Android notification lifecycle be
 - **Clipboard privacy:** Android sensitive/remote flags, macOS access denial, per-direction/app policy, Android users/work profiles, host users, TV defaults, local log/export inspection, and memory zeroing.
 - **Notifications:** post/update/remove, same ID with new revision, groups/conversations, progress storms, silent/importance, local-only, public/private/secret, custom RemoteViews fallback, app/channel blocks, DND, permission revocation, icon failures, and host center cleanup.
 - **Actions:** open, Back/cold start, clearable dismiss, non-clearable/ongoing dismiss, reply, multiple actions, destructive/authentication-required actions, stale/expired/replayed/forged tokens, update-before-click, remove-before-click, Android user lock/switch, and guest reboot.
-- **Platforms/editions:** Windows x64/ARM64 and multiple Apple Silicon generations; Desktop and TV; Core and Compatible/microG; host restart, OS update, guest update, snapshot restore, clock changes, and notification/clipboard broker crash injection.
+- **Platforms/editions:** Windows x64/ARM64 and multiple Apple Silicon generations; Desktop and TV; every eligible `ServiceMode=NoApp|microG|GApps` and `RootMode=Off|KernelSU|Magisk`; host restart, OS update, guest update, snapshot restore, clock changes, and notification/clipboard broker crash injection.
 
 ## Exit criteria
 

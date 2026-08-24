@@ -2,7 +2,7 @@
 
 Status: Draft for review  
 Prepared: 2026-08-24  
-Revised: 2026-08-25 — WSA/Waydroid/LineageOS/GrapheneOS audits, microG/F-Droid, ARM Native Bridge, Android TV, native per-app host UX, Phone/Tablet display profiles, unified input, clipboard, notifications, zero telemetry, and layered sandboxing  
+Revised: 2026-08-25 — three service modes (`NoApp`, `microG`, user-installed `GApps`), KernelSU/Magisk developer root, WSA/Waydroid/LineageOS/GrapheneOS audits, ARM Native Bridge, Android TV, native per-app host UX, Phone/Tablet display profiles, unified input, clipboard, notifications, zero telemetry, and layered sandboxing
 Planning horizon: 20–28 months with a 15–19 person core team  
 Products: Trinity Desktop + TV for Windows x64/ARM64; LeapDroid Desktop + TV for macOS ARM64
 
@@ -15,7 +15,9 @@ Develop two native host products and two UX editions on top of one shared Androi
 - Both products share the Android guest, host/guest control protocol, app catalog, lifecycle manager, file/clipboard/notification bridges, test suites, update format, local diagnostic schema, and compatibility database.
 - Native host presentation remains platform-specific: C++/WinRT + WinUI 3 on Windows and Swift/SwiftUI/AppKit on macOS.
 - Microsoft has not published the WSA runtime, host shell, integration services, or graphics stack. Use WSA as a documented behavior/UX reference only. Audit the separately published WSA Linux kernel and reuse only relevant, licensed kernel changes after rebasing them onto the selected current AOSP/GKI kernel.
-- Replace the GApps/Play distribution track with F-Droid plus an optional microG compatibility profile. On Windows x64, support ARM-only APKs through a pluggable AOSP Native Bridge layer with user-supplied Houdini or `libndk_translation` packages; neither package is bundled or downloaded by Trinity.
+- Offer exactly three immutable per-instance service modes: `NoApp` (clean AOSP, default), `microG` (verified F-Droid + microG), and `GApps` (an advanced, uncertified add-on imported by the user). Trinity/LeapDroid never bundle, mirror, search for, download, extract from another product, or grant rights to proprietary Google packages; microG and GApps never coexist in one instance.
+- Offer an independent advanced `RootMode`: `Off` by default, or mutually exclusive KernelSU/Magisk Developer variants built from pinned source. Root never disables verified boot or SELinux, grants host capability, or supports root concealment, attestation/Play Integrity/SafetyNet/DRM/anti-cheat bypass.
+- On Windows x64, support ARM-only APKs through a pluggable AOSP Native Bridge layer with user-supplied Houdini or `libndk_translation` packages; neither package is bundled or downloaded by Trinity.
 - Use Waydroid and LineageOS as selective upstream references, not wholesale runtime bases. Waydroid contributes guest HAL/session/image lessons; LineageOS contributes reviewed framework, microG, TV SystemUI, product-overlay, and device-support patterns.
 - Use GrapheneOS as a selective security reference over the AOSP baseline. Audit hardened SELinux/seccomp policy, network/sensor controls, secure spawning, allocator/memory hardening, dynamic-code restrictions, and local crash/log tooling; do not adopt the full GrapheneOS platform, Pixel-specific code, services, branding, or compatibility claims.
 - Ship a Desktop edition and a TV edition on every host/architecture target. They share the VM, kernel, vendor image, graphics, services, and protocol, but use distinct Android product images and userdata because TV is a fixed `television` product characteristic with a 10-foot launcher and input model.
@@ -49,6 +51,8 @@ This is the shortest credible route to a WSA-like product. Updating Trinity and 
 - The public `microsoft/WSA` repository is an issue/discussion and developer-documentation repository, not the shipping subsystem source. Microsoft separately publishes `WSA-Linux-Kernel`, including x86_64 and arm64 WSA configurations. Therefore “WSA-like” means documented feature/experience parity; only the kernel source is a potential code input.
 - AOSP exposes `libnativebridge` so a foreign-ISA translator can integrate with ART, but explicitly does not provide an actual translation implementation.
 - microG GmsCore is an Apache-2.0 free implementation of selected Play Services APIs and requires ROM-supported signature spoofing. F-Droid Client is GPL-3.0-or-later and validates repository index signatures and APK hashes.
+- Android compatibility does not automatically grant Google Play/GMS access. Google documents that Play/GMS licensing is separate and that only Play Protect-certified devices are eligible to include licensed Google applications; imported GApps therefore remain uncertified and best-effort.
+- KernelSU supports a GKI-oriented kernel root model and separately documents a current x86_64 path that can require disabling syscall hardening. That weakening is unacceptable for a production artifact, so KernelSU is target-gated. Magisk patches boot/init artifacts and can inject through Zygisk; Trinity/LeapDroid use reproducible separate boot variants, keep Zygisk off by default, and never disable AVB verification to integrate it.
 - Waydroid runs Android in Linux namespaces/LXC with direct host-kernel and Wayland access, and its current guest work is LineageOS-derived. Those host assumptions do not transfer to Windows or macOS, but its Android HAL, session, image-split, app-launch, and multi-window work are relevant audit inputs.
 - Current LineageOS source includes a restricted microG signature-spoofing change and maintained Android TV components including `android_device_lineage_atv` and `TvSystemUI`.
 - AOSP already isolates every app with a kernel-enforced per-UID sandbox and strengthens it with per-app SELinux domains and `seccomp-bpf`; native code is subject to the same sandbox boundary. GrapheneOS builds on AOSP with additional attack-surface reduction, exploit mitigations, hardened SELinux/seccomp, per-app network/sensor controls, and user-controlled local log capture instead of automated crash reporting.
@@ -71,10 +75,11 @@ This is the shortest credible route to a WSA-like product. Updating Trinity and 
 - Initial shipping ABIs: x86_64 guest on Windows x64; arm64 guest on Windows ARM64 and macOS ARM64.
 - Each target offers distinct Desktop and TV instances. Edition selection occurs when creating an instance; converting existing userdata between editions is unsupported.
 - Desktop app presentation defaults to `Auto`. `Phone` keeps compact-width resources even in a large host window; `Tablet` keeps at least medium-width resources; changing a locked form factor may recreate the task. TV remains a television product and does not silently inherit Desktop Phone/Tablet overrides.
-- F-Droid Client is preinstalled from a verified official release and the official F-Droid repository is enabled by default. Additional repositories remain an explicit user action.
-- The image contains microG integration, but activation, Google device registration, Cloud Messaging, and network-location choices are opt-in during provisioning and independently controllable later.
-- Functional network operations are not telemetry: user-requested application traffic, F-Droid repository synchronization, explicitly enabled microG services, signed update downloads, and user-configured DNS/time/connectivity services remain available. First-party update requests must use static signed metadata without stable installation/device identifiers, per-device query strings, or tracking cookies.
-- Google Play Services, Play Store, Widevine, Houdini, `libndk_translation`, and proprietary codecs are not bundled. Native Bridge providers are imported only from packages the user is legally entitled to use.
+- Every instance selects immutable `ServiceMode=NoApp|microG|GApps` and `RootMode=Off|KernelSU|Magisk` at creation. `NoApp` and `Off` are defaults; changing either dimension creates or clones to a new instance rather than reusing privileged/service state.
+- `NoApp` contains no optional store/service bundle. `microG` contains verified F-Droid plus the approved microG set; Google device registration, Cloud Messaging, and network-location choices remain independent opt-ins. `GApps` contains only a compatible package explicitly imported by the user through the payload-free provider workflow.
+- Functional network operations are not first-party telemetry: user-requested app traffic, F-Droid synchronization, enabled microG functions, user-installed GApps, signed updates, and user-configured DNS/time/connectivity services are classified separately. First-party requests use no stable installation/device identifier, per-device query string, or tracking cookie.
+- GApps, Google Play Services/Store, Widevine, Houdini, `libndk_translation`, proprietary codecs, root modules, and bypass payloads are not bundled or automatically downloaded. Imported packages are accepted only from files the user selects and remains responsible for using lawfully.
+- Root variants are Developer/Advanced SKUs. Enabling guest root lowers the guest-sandbox assurance and can break certification-sensitive applications, but never weakens VM/host broker isolation or first-party zero telemetry.
 - Desktop clipboard sync is enabled only after onboarding disclosure and remains globally/per-instance controllable; notification forwarding requires both host authorization and Android notification-access consent. TV clipboard is off by default and TV notification previews are opt-in/allowlisted.
 
 ## 3. Product goals
@@ -82,7 +87,8 @@ This is the shortest credible route to a WSA-like product. Updating Trinity and 
 ### Experience goals
 
 - Install Android APKs and launch each application from the host launcher as if it were a desktop app.
-- Discover and update libre applications through the preinstalled F-Droid client; use microG only when an application needs its supported compatibility APIs and the user opts in.
+- Choose `NoApp`, `microG`, or user-installed `GApps` when creating an instance; use the host APK installer in every mode and F-Droid in `microG` mode.
+- Optionally create a clearly marked KernelSU or Magisk Developer instance with default-deny root grants, module recovery, verified artifacts, and no concealment/bypass claim.
 - Present each Android task in an independent native host window with resize, orientation, fullscreen, picture-in-picture, multi-monitor, keyboard, mouse, touch, stylus, and gamepad support.
 - Make the host shell visually and behaviorally native: Windows 11 Fluent/WinUI controls and window conventions for Trinity; AppKit/SwiftUI menus, windows, sheets, commands, and Retina behavior for LeapDroid. Avoid custom-drawn imitations of host title bars or system controls.
 - Expose `App settings` from the launcher, app context menu, and focused window. Users can choose Auto/Phone/Tablet, adaptive/fixed behavior, orientation, initial size, remembered placement, aspect/letterbox policy, display scale, fullscreen/PiP, input, and per-app integrations, then preview/relaunch/reset safely.
@@ -94,7 +100,7 @@ This is the shortest credible route to a WSA-like product. Updating Trinity and 
 - Expose ADB only when developer mode is enabled and protect it with pairing and localhost-only defaults.
 - Deliver signed guest and host updates with rollback.
 - Provide a local diagnostics viewer and explicit, previewable export bundle without any automatic upload path.
-- Provide a TV edition that starts as a single full-screen or windowed 10-foot experience, supports D-pad/gamepad/media-key navigation, host microphone/audio, 1080p and 4K display profiles, F-Droid, optional microG, and TV-aware app filtering.
+- Provide a TV edition that starts as a single full-screen or windowed 10-foot experience, supports D-pad/gamepad/media-key navigation, host microphone/audio, 1080p and 4K display profiles, all gated service/root modes, and TV-aware app filtering.
 
 ### Engineering goals
 
@@ -106,6 +112,8 @@ This is the shortest credible route to a WSA-like product. Updating Trinity and 
 - No guest-controlled parser in the privileged UI process.
 - Reproducible builds, software bills of materials, signed artifacts, and automated CTS/VTS/deqp testing.
 - A provider-neutral ARM-on-x64 compatibility layer that can be disabled, audited, upgraded, and tested independently from the base system image.
+- Versioned `ServiceMode`, `GAppsProvider`, and add-on manifests that preserve a clean signed AOSP base, original APK signatures, exact privilege deltas, transactional import/update/rollback, and strict mode isolation.
+- Versioned `RootMode` artifacts for clean `Off`, KernelSU, and Magisk variants with reproducible source builds, separate trust metadata, default-deny grants, module safe mode, and host-owned recovery.
 - Defense in depth across the VM boundary, Android app sandbox, SELinux/seccomp, per-app network/sensor controls, and least-privilege host brokers without exceeding defined frame-time, input-latency, memory, CPU, or energy budgets.
 - One input contract across Windows and macOS: standard Android key/axis semantics, deterministic focus and capture ownership, no duplicate event paths, and bounded queues at high polling rates.
 - Versioned clipboard and notification models with monotonic revisions, idempotent reconciliation, opaque action capabilities, strict content limits, and local redacted diagnostics only.
@@ -113,11 +121,11 @@ This is the shortest credible route to a WSA-like product. Updating Trinity and 
 
 ### Non-goals for the first general release
 
-- Google Play certification, Google Play Store, GApps, or GMS distribution.
-- Hardware Widevine, Play Integrity equivalence, SafetyNet bypasses, root concealment, or anti-cheat circumvention.
+- Google Play/Play Protect/Google TV certification, GApps/GMS/Play Store distribution or automatic download, or any claim that a user import is licensed/certified by Google.
+- Hardware Widevine, Play Integrity equivalence/bypass, SafetyNet bypass, root concealment, certified-device fingerprint/attestation spoofing, banking/DRM bypass, or anti-cheat circumvention.
 - Direct USB, Bluetooth controller passthrough, NFC, telephony, or eSIM.
 - Bundling, extracting, redistributing, or automatically downloading Houdini or `libndk_translation`; the project does not grant licenses for user-imported providers.
-- Guaranteeing that microG supports every Google API, Play Integrity, licensed media, banking, or anti-cheat application.
+- Guaranteeing that microG or user-installed GApps supports every Google API, Play Store feature, Play Integrity, licensed media, banking, or anti-cheat application.
 - Pixel-perfect compatibility with every phone sensor or OEM extension.
 - Google TV certification, Play Store for TV, licensed Google TV launcher/content services, Widevine L1, HDCP, protected-video paths, or guaranteed commercial streaming-service compatibility.
 - HDMI-CEC passthrough, tuner hardware, TV Input Framework sources, Dolby/DTS bitstream passthrough, or HDR certification in the first TV release.
@@ -157,7 +165,9 @@ Create a shared runtime repository with explicit license boundaries:
 - `runtime/graphics`: Gfxstream integration, ANGLE adapter, SwiftShader fallback, and optional Trinity projection plugin.
 - `guest/aosp`: manifests, product definitions, kernel config, SELinux policy, HALs, system extensions, and guest agents.
 - `guest/products/common`, `guest/products/desktop`, and `guest/products/tv`: shared product base plus edition overlays, launchers, feature declarations, input policy, and edition-specific tests.
-- `guest/packages`: pinned microG and F-Droid integration manifests, signing-certificate allowlists, notices, and update policy; do not commit proprietary Native Bridge payloads.
+- `guest/packages`: pinned microG and F-Droid integration manifests, signing-certificate allowlists, notices, and update policy.
+- `guest/service-modes`: `NoApp`/`microG`/`GApps` schemas, payload-free GApps provider descriptors, add-on builder/validator, synthetic fixtures, privilege deltas, and compatibility tests; no proprietary Google payload enters source or CI.
+- `guest/root`: clean-absence tests plus pinned KernelSU/Magisk source manifests, reproducible boot/kernel variants, manager policy, recovery, update/rollback, and root compatibility tests; no bypass/concealment modules.
 - `guest/nativebridge`: AOSP-facing provider interface, Houdini and `libndk_translation` manifests/adapters, validator, activation logic, and compatibility tests without vendor binaries.
 - `upstream-audits/wsa`, `upstream-audits/waydroid`, `upstream-audits/lineageos`, and `upstream-audits/grapheneos`: pinned source revisions, per-change provenance, license disposition, applicability, security/performance evidence, and `import`/`reimplement`/`drop` decisions.
 - `protocol`: versioned schemas and compatibility rules; generated bindings for C++, Rust, Kotlin/Java, and Swift where needed.
@@ -219,13 +229,13 @@ Keep current AOSP as the canonical guest and treat GrapheneOS as a bounded harde
 | Secure app spawning and dynamic-code/JIT restrictions | Audit and selectively rebase | Forbid dynamic code loading in first-party base services; use explicit per-app compatibility exceptions for user apps after measurement |
 | Local log viewer/manual crash reporting | Reimplement | Bounded memory/ring-buffer logs, redaction preview, and manual export only; no automated crash or usage upload exists |
 | Storage/Contact Scopes | Evaluate for Beta or later | Adopt only if current-AOSP integration, CTS behavior, maintenance cost, and UX are acceptable |
-| Sandboxed Google Play | Drop | The product uses F-Droid and optional microG; microG remains an ordinary sandboxed app with narrowly restricted signature spoofing |
+| Sandboxed Google Play | Do not import | The project's user-supplied GApps add-on is a separate local provider design; do not copy GrapheneOS implementation/services or claim its containment/security properties |
 | Pixel firmware, radio, USB-C, hardware attestation, telephony | Drop | Hardware-specific and irrelevant to a virtual Android subsystem |
 | Whole GrapheneOS manifest, infrastructure, branding | Do not adopt | Avoid a broad platform fork, external service dependency, trademark confusion, and unsupported security equivalence claims |
 
 Production builds use a mandatory zero-outbound-telemetry profile. They contain no analytics SDK, crash uploader, remote logger, product experimentation service, stable install/device tracking ID, or metrics collector. Local health counters, traces, logs, and crash artifacts are bounded, privacy-redacted, stored locally, visible to the user, and exported only after an explicit action; release CI rejects any automatic upload path.
 
-Maintain a machine-readable first-party egress manifest. It distinguishes functional traffic—signed static update manifests/packages, F-Droid synchronization, explicitly enabled microG services, user apps, and user-configured connectivity/DNS/time/location—from telemetry. Product update requests carry no stable installation/device identifier, tracking cookie, or per-device query parameter. A host-provided clock or user-configured service is preferred over hidden guest network-time/connectivity probes; enterprise/offline update and disabled-connectivity-check modes are supported.
+Maintain a machine-readable first-party egress manifest. It distinguishes functional traffic—signed static updates, F-Droid, enabled microG, user-installed GApps, rooted apps/modules, user apps, and user-configured connectivity/DNS/time/location—from telemetry and from each other. Product update requests carry no stable installation/device identifier, tracking cookie, or per-device query parameter. A host-provided clock or user-configured service is preferred over hidden guest probes; enterprise/offline policy can require `NoApp` + `Off`.
 
 Defense in depth spans the VM, guest, and host. The guest keeps per-UID sandboxing, SELinux enforcing, seccomp, namespaces, Binder permission checks, scoped storage, user/profile separation, AVB/dm-verity, resource limits, and per-app Network/Sensors toggles. Host UI, VM controller, renderer, media codecs, clipboard, notifications, file/camera/microphone/location brokers, updater, diagnostics, and Native Bridge inspection run as separate least-privilege processes with capability-based IPC, quotas, restart boundaries, and no shared ambient authority.
 
@@ -253,15 +263,17 @@ Detailed implementation and acceptance gates are in `phase-6a-zero-telemetry-san
 - Implement PackageManager, ActivityTaskManager, WindowManager, notification, clipboard, file, input, camera, sensor, and power agents behind stable AIDL interfaces.
 - Share immutable system/vendor partitions wherever Android compatibility permits, but give Desktop and TV separate product partitions, update manifests, instance identities, and userdata disks.
 
-### 5.7 microG and F-Droid services
+### 5.7 Service modes, application services, and developer root
 
-- Build one signed AOSP guest with two provisioning profiles: `Core` (AOSP + F-Droid) and `Compatible` (AOSP + F-Droid + microG enabled). The selected profile is policy, not a separate userdata-incompatible fork.
-- Preinstall the official F-Droid Client as a replaceable guest package, pin its signing certificate, verify release provenance, retain GPL source/notice obligations, and enable only the official repository by default.
-- Start with Android's normal user-confirmed package installer. Evaluate F-Droid Privileged Extension only after a current security review; if enabled, restrict its install/delete capability to the pinned official F-Droid signer and keep it outside the general host control channel.
-- Integrate officially signed microG GmsCore, Companion, and only the modules required by the approved compatibility scope. Keep microG in the ordinary app sandbox. Add modern signature spoofing in the AOSP framework, allowlisted exclusively to approved microG package names and signing certificates, with no broad privileged-service identity.
-- Expose separate opt-ins for microG itself, Google device registration, Cloud Messaging, and network-location backends. Disabling microG stops its services without weakening package-signature validation for other apps.
-- Maintain an API/app compatibility matrix and state clearly that microG is partial compatibility, not certified GMS and not a Play Integrity solution.
-- Run F-Droid and microG compatibility separately for Desktop and TV. The TV edition must pass D-pad/focus/10-foot readability gates; if the official F-Droid UI fails, provide a minimal TV catalog using reviewed F-Droid signed-index components rather than weakening repository verification.
+- Every new instance selects exactly one immutable `ServiceMode`: `NoApp`, `microG`, or `GApps`. `NoApp` is the clean AOSP default and contains no store or compatibility-service bundle; all modes retain the host APK installer and optional developer ADB.
+- `microG` provisions a verified official F-Droid Client plus the approved microG packages. Keep both in ordinary app sandboxes, restrict signature spoofing by package name and pinned certificate, and expose separate opt-ins for device registration, Cloud Messaging, network location, and network access.
+- `GApps` is an advanced, uncertified local add-on. The user selects a lawfully obtained package; a sandboxed importer validates its descriptor, Android/API/ABI/edition compatibility, contents, signatures and hashes, privilege delta, and space requirements before constructing a sealed, versioned, read-only add-on. The project never bundles, mirrors, searches for, downloads, or extracts proprietary Google packages.
+- Never mix microG and GApps in one instance. Changing `ServiceMode` creates or clones to a new instance and migrates only user-selected ordinary app/data exports—not system packages, accounts, credentials, tokens, or privileged state.
+- Preserve the signed AOSP base, AVB/dm-verity, enforcing SELinux, rollback, and a host-owned safe-boot path in every mode. A GApps import may extend only reviewed allowlisted partitions/permissions; it may not make system writable or silently change the base image.
+- Treat GApps compatibility as best-effort and clearly label the instance uncertified. Do not claim Google Play/Play Protect/Google TV certification, Play Integrity, Widevine/DRM, banking, anti-cheat, or complete API compatibility.
+- `RootMode` is a separate immutable choice: `Off` (default), `KernelSU`, or `Magisk`. Rooted variants are Advanced/Developer artifacts built reproducibly from pinned upstream source, with default-deny per-app grants, no host capability, safe mode/recovery, and no concealment or attestation/DRM/banking/anti-cheat bypass support.
+- KernelSU is target-gated: do not ship it on Windows x64 if the pinned upstream release requires disabling syscall hardening. Magisk uses a separately signed boot/init variant, keeps Zygisk off by default, and never requires disabling verified boot or SELinux. KernelSU and Magisk never coexist in one instance.
+- Phase 2B defines service-mode/GApps implementation and Phase 2C defines KernelSU/Magisk integration, recovery, verification, and release gates.
 
 ### 5.8 Windows x64 ARM Native Bridge
 
@@ -424,8 +436,9 @@ Detailed work, platform differences, validation, and release gates are in `phase
 | Deep links | Basic | Verified routing | Production | Additional host targets |
 | Camera/mic/location | No | Opt-in | Permission-brokered | Additional sensors |
 | Suspend/resume | Process idle | Snapshot preview | Reliable fast resume | Multi-instance restore |
-| App store | F-Droid browse/install | Updates + host launcher sync | Hardened install flow | Enterprise F-Droid repos |
-| microG | Opt-in preview | API/app matrix | Supported opt-in profile | Additional compatible APIs |
+| App installation/catalog | Host APK installer in every mode; F-Droid in `microG` | Updates + host launcher sync | Hardened install flow | Enterprise repositories/catalogs |
+| Service modes | `NoApp` + `microG` | Transactional user-supplied GApps importer | Independently gated `NoApp`/`microG`/`GApps` | Additional open providers only after review |
+| Root providers | `Off`; KernelSU/Magisk engineering builds | Default-deny grants, modules, safe mode, recovery | Provider/target combinations only if all gates pass | Additional providers out of scope |
 | ARM APKs on Windows x64 | Provider import spike | Houdini/`libndk_translation` preview | User-supplied providers if gates pass | Additional licensed providers |
 | Privacy/diagnostics | Zero telemetry + manual local export | User-facing redaction/viewer + egress tests | Audited zero-telemetry production gate | Enterprise offline diagnostics tooling |
 | Sandbox hardening | Threat model + per-process spikes | Guest/host broker isolation | Measured layered hardening on every SKU | Additional scopes/mitigations after compatibility gates |
@@ -441,7 +454,7 @@ Android TV-specific delivery:
 | Notifications | Off/summary opt-in | Per-app/channel allowlist | Redacted remote-friendly center | Rich actions after TV UX review |
 | Video decode | Software + initial host decode | H.264/HEVC/VP9 host paths as available | Per-host support matrix | AV1/advanced profiles |
 | Audio | Stereo PCM | Multichannel PCM | Stable routing/latency | Licensed bitstream passthrough |
-| App discovery | APK/F-Droid | Leanback filtering | TV compatibility catalog | Curated enterprise catalogs |
+| App discovery | APK in every mode; F-Droid in `microG` | Leanback filtering + gated GApps import | Per-mode TV compatibility catalog | Curated enterprise catalogs |
 | DRM/protected playback | Unsupported | Unsupported | Unsupported unless separately licensed | Separate certification program |
 
 ## 7. Delivery sequence
@@ -452,26 +465,28 @@ The detailed work is split into phase files in this directory:
 2. `phase-1-runtime-foundation.md` — shared repo, modern QEMU, native builds, CI.
 3. `phase-2-android-guest.md` — AOSP products, kernels, HALs, guest agents.
 4. `phase-2a-android-tv.md` — TV products, 10-foot UX, input, media, and TV app compatibility.
-5. `phase-3-graphics.md` — Gfxstream/ANGLE and Trinity projection migration.
-6. `phase-4-seamless-windows.md` — Desktop per-app windows and input/composition.
-7. `phase-4a-input-cursor-controller.md` — cross-platform keyboard, IME, pointer/cursor, capture, controllers, and haptics.
-8. `phase-4b-native-app-experience-display-profiles.md` — native Windows/macOS app shell, host identity/activation, and per-app Auto/Phone/Tablet profiles.
-9. `phase-5-host-integration.md` — Windows/macOS Desktop and TV host features.
-10. `phase-5a-clipboard-notifications.md` — bidirectional clipboard and Android-to-host notification lifecycle/actions.
-11. `phase-6-security-update-compliance.md` — security, update, licensing, CTS/VTS/TV gates.
-12. `phase-6a-zero-telemetry-sandbox.md` — GrapheneOS-derived audit, zero telemetry, guest/host isolation, egress proof, and hardening performance gates.
-13. `phase-7-hardening-release.md` — performance, compatibility, beta, and GA.
+5. `phase-2b-service-modes-gapps.md` — immutable NoApp/microG/GApps modes and payload-free user GApps import.
+6. `phase-2c-root-providers.md` — Off/KernelSU/Magisk artifacts, grants, modules, recovery, and security gates.
+7. `phase-3-graphics.md` — Gfxstream/ANGLE and Trinity projection migration.
+8. `phase-4-seamless-windows.md` — Desktop per-app windows and input/composition.
+9. `phase-4a-input-cursor-controller.md` — cross-platform keyboard, IME, pointer/cursor, capture, controllers, and haptics.
+10. `phase-4b-native-app-experience-display-profiles.md` — native Windows/macOS app shell, host identity/activation, and per-app Auto/Phone/Tablet profiles.
+11. `phase-5-host-integration.md` — Windows/macOS Desktop and TV host features.
+12. `phase-5a-clipboard-notifications.md` — bidirectional clipboard and Android-to-host notification lifecycle/actions.
+13. `phase-6-security-update-compliance.md` — security, update, licensing, CTS/VTS/TV gates.
+14. `phase-6a-zero-telemetry-sandbox.md` — GrapheneOS-derived audit, zero telemetry, guest/host isolation, egress proof, and hardening performance gates.
+15. `phase-7-hardening-release.md` — performance, compatibility, beta, and GA.
 
-Desktop critical path: Phase 0 → Phase 1 → Phase 2 → Phase 3 → Phase 4 → Phase 4A + Phase 4B → Phase 5A → Phase 6A → Phase 7. TV critical path: Phase 0 → Phase 1 → Phase 2 → Phase 2A → Phase 3 → Phase 4A → Phase 5 → Phase 5A → Phase 6A → Phase 7. Phase 6 and Phase 6A start during Phase 1 and gate every public release.
+Desktop critical path: Phase 0 → Phase 1 → Phase 2 → Phase 2B → Phase 3 → Phase 4 → Phase 4A + Phase 4B → Phase 5A → Phase 6A → Phase 7. TV critical path: Phase 0 → Phase 1 → Phase 2 → Phase 2A + Phase 2B → Phase 3 → Phase 4A → Phase 5 → Phase 5A → Phase 6A → Phase 7. Phase 2C runs in parallel and gates each rooted provider/target without blocking the secure `RootMode=Off` release. Phase 6 and Phase 6A start during Phase 1 and gate every public release.
 
 ## 8. Milestones and schedule
 
 | Milestone | Target from kickoff | Exit outcome |
 |---|---:|---|
-| M0 Architecture and source gates | 8 weeks | WHPX Arm64/HVF/TV boots proven; source/graphics/input, native-shell/macOS-identity, per-task display-profile, clipboard/notification, GrapheneOS-audit, zero-telemetry, and sandbox gates frozen |
+| M0 Architecture and source gates | 8 weeks | WHPX Arm64/HVF/TV boots proven; source/graphics/input, service-mode/GApps/root, native-shell/macOS-identity, per-task display-profile, clipboard/notification, GrapheneOS-audit, zero-telemetry, and sandbox gates frozen |
 | M1 Native runtime boot | 4 months | QEMU current boots x86_64 and arm64 guests on all three host targets |
-| M2 Modern Desktop guest | 7 months | AOSP Desktop baseline boots; ADB/APK/lifecycle/storage/network work |
-| M2-TV Android TV guest | 9 months | x86_64/arm64 TV products boot with launcher, D-pad, F-Droid, audio, and 1080p display |
+| M2 Modern Desktop guest | 7 months | AOSP Desktop baseline boots; ADB/APK/lifecycle/storage/network work; `NoApp` and `Off` absence tests pass |
+| M2-TV Android TV guest | 9 months | x86_64/arm64 TV products boot with launcher, D-pad, per-mode provisioning, audio, and 1080p display |
 | M3 Accelerated graphics | 11 months | GLES and Vulkan compatibility backend passes agreed conformance subset |
 | M4 Desktop seamless windows and input | 15 months | Native independent host windows, Auto/Phone/Tablet per-app settings, resize, host IME, cursor sync/capture, multi-controller input, launcher/activation, text clipboard, basic notifications, audio |
 | M5 Desktop Developer Preview | 16 months | Signed Desktop builds for all targets and published compatibility constraints |
@@ -551,6 +566,8 @@ Performance claims must always include host CPU, GPU, memory, OS build, guest bu
 - Suspend/resume, low-memory, low-disk, GPU-reset, driver-upgrade, Windows Update, macOS update, network transition, and abrupt-power-loss testing.
 - Security review, dependency scanning, SBOM verification, update-signing drills, and renderer sandbox escape assessment.
 - Static dependency/SDK scan and runtime packet-capture tests proving that production artifacts contain no telemetry client or undocumented first-party egress; repeat with microG disabled/enabled, F-Droid idle/syncing, and online/offline updates.
+- Service-mode matrix covering clean creation, import/provision, boot, update, clone, reset, rollback, account/state non-migration, negative package/signature tests, and cross-mode isolation for `NoApp`, `microG`, and `GApps`; use only synthetic/free fixtures in CI for the GApps importer.
+- Root-mode matrix covering clean absence, source reproducibility, grant/revoke, manager authentication, module install/update/remove, bootloop safe mode, host recovery, update/rollback, SELinux/AVB enforcement, and host-boundary attacks for `Off`, KernelSU, and Magisk on every eligible target.
 - Guest sandbox tests for UID/profile separation, SELinux enforcing, seccomp, Binder/file/network/sensor boundaries, dynamic-code policy, malformed IPC, and resource exhaustion; host tests for per-broker tokens/entitlements, IPC ACLs, file/network/device denial, Job Object/pressure quotas, crash restart, and sandbox escape attempts.
 - Performance A/B tests for every hardening change on Windows x64/ARM64 and macOS ARM64; failures require optimization, measured narrowing, or an explicit compatibility exception with owner and expiry.
 
@@ -575,6 +592,9 @@ Performance claims must always include host CPU, GPU, memory, OS build, guest bu
 | GPL/Apache/proprietary mixing | Distribution risk | Process and repository boundaries, notices, source offers, automated license inventory, legal review |
 | microG API gaps or signature-spoofing abuse | App failures or identity/security weakening | Officially signed microG, certificate/package allowlist, independent toggles, explicit compatibility claims, regression tests |
 | F-Droid supply-chain or privileged install compromise | Malicious app installation | Pin official client signer, verify signed indexes/APK hashes, default to user-confirmed install, security-gate any privileged helper |
+| GApps licensing, certification, compatibility, or malicious import | Distribution exposure, broken boot/update, credential or privilege compromise | User-selected local files only; no discovery/download/distribution; sandboxed strict importer; original signatures/hashes; allowlisted privilege delta; sealed add-on; uncertified label; transactional rollback |
+| Guest root or a malicious root module escapes its intended boundary | Guest compromise, bootloop, data loss, or attempted host attack | `Off` default; separate signed artifacts; default-deny grants; no online module store; modules treated as arbitrary guest-root code; host-owned safe boot/recovery; broker/VM isolation and fuzzing remain mandatory |
+| KernelSU x86_64 requires weaker syscall mitigation | Security regression on Windows x64 | Target-gate the pinned version; do not ship KernelSU if syscall hardening must be disabled; retain `Off` and independently gated Magisk |
 | Houdini/`libndk_translation` legal and version uncertainty | ARM-only APK compatibility gaps | User-supplied provider model, no bundled/downloaded binaries, legal acknowledgement, strict validation, per-provider matrix, `Off` fallback |
 | WSA code availability misconception | Schedule or licensing failure | Use only published kernel source after a current-kernel diff; independently implement all runtime and host features |
 | Waydroid architecture mismatch | Time lost porting Linux container code | Reuse only guest/HAL/image/session patterns; retain QEMU VM isolation and native host presentation |
@@ -590,25 +610,27 @@ Performance claims must always include host CPU, GPU, memory, OS build, guest bu
 
 ## 13. Decisions required before implementation approval
 
-1. Confirm F-Droid is preinstalled and microG is integrated but opt-in at provisioning. Recommendation: approve; preserve a Core profile for users who want no Google-compatible network services.
-2. Confirm the first two Windows x64 Native Bridge adapters are Houdini and `libndk_translation`, both user-supplied. Recommendation: approve only after Phase 0 legal/technical gates; keep `Off` as default.
-3. Decide whether F-Droid app installs always require Android confirmation or may use the Privileged Extension after security review. Recommendation: confirmation for preview; privileged installs only after signer-restricted hardening.
-4. Confirm minimum Windows and macOS versions and whether Microsoft Store/Mac App Store distribution is mandatory.
-5. Confirm whether Trinity projection is a release requirement or a post-compatibility performance feature. Recommendation: post-compatibility feature.
-6. Confirm whether the products share a public runtime repository or use synchronized internal mirrors. Recommendation: one canonical shared runtime repository.
-7. Confirm product priority if schedules conflict. Recommendation: Trinity Windows x64 developer preview first, LeapDroid macOS ARM64 second, Trinity Windows ARM64 after the Phase 0 accelerator gate.
-8. Confirm Desktop and TV use separate instances/userdata rather than an in-place mode switch. Recommendation: approve; Android product characteristics and app/input policies differ materially.
-9. Confirm staged release order: Desktop GA at month 24 and TV GA at month 28. Recommendation: approve unless two additional TV/media engineers and expanded hardware QA are funded.
-10. Decide the TV F-Droid UX after the Phase 0 D-pad audit: official client if usable, otherwise a minimal TV frontend over reviewed signed-index components. Recommendation: never ship a TV frontend that weakens F-Droid verification.
-11. Confirm the host owns cursor rendering while Android supplies icon/visibility/hotspot metadata. Recommendation: approve; this removes a frame of cursor latency and prevents double cursors.
-12. Confirm Windows uses Raw Input for keyboard/mouse and GameInput for controllers, while macOS uses AppKit/NSTextInputClient and GameController. Recommendation: approve; keep XInput only as a measured compatibility fallback and prohibit duplicate reads.
-13. Decide whether host key-to-touch mapping, macros, and rapid-fire belong in first GA. Recommendation: defer; they expand security, accessibility, support, and game-policy scope beyond standards-based input.
-14. Confirm Desktop clipboard direction and formats. Recommendation: two-way current clipboard after disclosure; text at Preview, sanitized HTML and bounded PNG at Beta, files only through the explicit file broker later.
-15. Confirm sensitive and clear semantics. Recommendation: never auto-export Android clips marked sensitive; do not propagate clear unless it targets the same still-current bridged revision.
-16. Confirm notification permissions and dismissal. Recommendation: require Android notification-access and host authorization, reconcile only the product's own host notifications, and never request Windows access to unrelated notifications.
-17. Confirm TV defaults. Recommendation: clipboard off/text-only opt-in; notifications opt-in with hidden previews and per-app/channel allowlisting for a 10-foot environment.
+1. Confirm exactly three immutable service modes: `NoApp` (default, clean AOSP), `microG` (verified F-Droid + approved microG), and `GApps` (user-imported, advanced and uncertified). Recommendation: locked; switching creates/clones a new instance and never migrates accounts/tokens/system state.
+2. Confirm GApps policy: the project ships only the provider/importer, never bundles, mirrors, searches for, downloads, or extracts proprietary Google payloads, and makes no Play/Play Protect/Google TV/Integrity/DRM certification claim. Recommendation: locked.
+3. Confirm independent `RootMode=Off|KernelSU|Magisk`, with `Off` default, one root provider per Developer instance, no concealment/bypass support, and target-gated KernelSU x86_64. Recommendation: locked.
+4. Confirm the first two Windows x64 Native Bridge adapters are Houdini and `libndk_translation`, both user-supplied. Recommendation: approve only after Phase 0 legal/technical gates; keep `Off` as default.
+5. Decide whether F-Droid app installs always require Android confirmation or may use the Privileged Extension after security review. Recommendation: confirmation for preview; privileged installs only after signer-restricted hardening.
+6. Confirm minimum Windows and macOS versions and whether Microsoft Store/Mac App Store distribution is mandatory.
+7. Confirm whether Trinity projection is a release requirement or a post-compatibility performance feature. Recommendation: post-compatibility feature.
+8. Confirm whether the products share a public runtime repository or use synchronized internal mirrors. Recommendation: one canonical shared runtime repository.
+9. Confirm product priority if schedules conflict. Recommendation: Trinity Windows x64 developer preview first, LeapDroid macOS ARM64 second, Trinity Windows ARM64 after the Phase 0 accelerator gate.
+10. Confirm Desktop and TV use separate instances/userdata rather than an in-place mode switch. Recommendation: approve; Android product characteristics and app/input policies differ materially.
+11. Confirm staged release order: Desktop GA at month 24 and TV GA at month 28. Recommendation: approve unless two additional TV/media engineers and expanded hardware QA are funded.
+12. Decide the TV F-Droid UX after the Phase 0 D-pad audit: official client if usable, otherwise a minimal TV frontend over reviewed signed-index components. Recommendation: never ship a TV frontend that weakens F-Droid verification.
+13. Confirm the host owns cursor rendering while Android supplies icon/visibility/hotspot metadata. Recommendation: approve; this removes a frame of cursor latency and prevents double cursors.
+14. Confirm Windows uses Raw Input for keyboard/mouse and GameInput for controllers, while macOS uses AppKit/NSTextInputClient and GameController. Recommendation: approve; keep XInput only as a measured compatibility fallback and prohibit duplicate reads.
+15. Decide whether host key-to-touch mapping, macros, and rapid-fire belong in first GA. Recommendation: defer; they expand security, accessibility, support, and game-policy scope beyond standards-based input.
+16. Confirm Desktop clipboard direction and formats. Recommendation: two-way current clipboard after disclosure; text at Preview, sanitized HTML and bounded PNG at Beta, files only through the explicit file broker later.
+17. Confirm sensitive and clear semantics. Recommendation: never auto-export Android clips marked sensitive; do not propagate clear unless it targets the same still-current bridged revision.
+18. Confirm notification permissions and dismissal. Recommendation: require Android notification-access and host authorization, reconcile only the product's own host notifications, and never request Windows access to unrelated notifications.
+19. Confirm TV defaults. Recommendation: clipboard off/text-only opt-in; notifications opt-in with hidden previews and per-app/channel allowlisting for a 10-foot environment.
 
-Locked product decisions: production zero telemetry is mandatory and not an opt-out setting; diagnostics are local/manual only. GrapheneOS is a selective hardening reference over AOSP, not the guest distribution or a security-equivalence claim. Desktop uses real native host windows and native shell controls; `Auto`, `Phone`, and `Tablet` are first-class per-app presentation modes, with `Auto` as the default. Android renders the internal app UI. Separate macOS Dock identity remains gated on the signed launcher-shim proof.
+Locked product decisions: production zero telemetry is mandatory and not an opt-out setting; diagnostics are local/manual only. Instances use immutable `ServiceMode=NoApp|microG|GApps` and `RootMode=Off|KernelSU|Magisk`, with `NoApp + Off` as the default; GApps is user-imported only, and root is an advanced developer feature without concealment/bypass support. GrapheneOS is a selective hardening reference over AOSP, not the guest distribution or a security-equivalence claim. Desktop uses real native host windows and native shell controls; `Auto`, `Phone`, and `Tablet` are first-class per-app presentation modes, with `Auto` as the default. Android renders the internal app UI. Separate macOS Dock identity remains gated on the signed launcher-shim proof.
 
 ## 14. Reference sources
 
@@ -625,11 +647,21 @@ Locked product decisions: production zero telemetry is mandatory and not an opt-
 - Android CTS: https://source.android.com/docs/compatibility/cts
 - Android VTS: https://source.android.com/docs/core/tests/vts
 - Android compatibility and GMS licensing FAQ: https://source.android.com/docs/compatibility/compatibility-faq
+- Google Play Protect certification: https://support.google.com/googleplay/answer/7165974
+- Google Play services overview: https://developers.google.com/android/guides/overview
 - AOSP ART Native Bridge: https://android.googlesource.com/platform/art/+/refs/heads/main/libnativebridge/
 - microG GmsCore: https://github.com/microg/GmsCore
 - microG signature spoofing requirements: https://github.com/microg/GmsCore/wiki/Signature-Spoofing
 - F-Droid Client: https://f-droid.org/packages/org.fdroid.fdroid/
 - F-Droid release channels and signing keys: https://f-droid.org/docs/Release_Channels_and_Signing_Keys/
+- KernelSU installation and GKI integration: https://kernelsu.org/guide/installation.html
+- KernelSU x86_64 support caveat: https://kernelsu.org/guide/x86_64-support.html
+- KernelSU module guide: https://kernelsu.org/guide/module.html
+- KernelSU source and licensing: https://github.com/tiann/KernelSU
+- Magisk installation: https://topjohnwu.github.io/Magisk/install.html
+- Magisk developer/module/Zygisk guides: https://topjohnwu.github.io/Magisk/guides.html
+- Magisk build and signing: https://topjohnwu.github.io/Magisk/build.html
+- Magisk source and licensing: https://github.com/topjohnwu/Magisk
 - Intel Bridge Technology licensing context: https://www.intel.com/content/www/us/en/developer/topic-technology/bridge-technology.html
 - Waydroid runtime: https://github.com/waydroid/waydroid
 - Waydroid Android hardware integration: https://github.com/waydroid/android_hardware_waydroid

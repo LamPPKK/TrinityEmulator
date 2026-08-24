@@ -15,7 +15,7 @@ Purpose: Establish reproducible native builds and a maintainable VM/device base.
 - Add versioned clipboard and notification schemas plus host-neutral brokers for revision/acknowledgement, active-instance routing, permission state, redaction, action capability expiry, reconciliation, rate limiting, and bounded bulk assets.
 - Put HTML/image/icon decoding and normalization in sandboxed helpers; neither the VM controller nor UI process may parse guest rich content or retain Android action authority.
 - Replace manual global/thread state in old `direct-express` code with documented ownership and synchronization boundaries.
-- Run the native control center, per-task AppShell/presentation brokers, VM controller, renderer, media, update, diagnostics, Native Bridge inspection, and every host-integration broker as separate processes according to the Phase 6A privilege map. IPC is authenticated, capability-scoped, bounded, cancellable, and rejects cross-user/instance handles.
+- Run the native control center, per-task AppShell/presentation brokers, VM controller, renderer, media, update, diagnostics, Native Bridge/GApps/root-artifact inspection, root recovery, and every host-integration broker as separate processes according to the Phase 6A privilege map. IPC is authenticated, capability-scoped, bounded, cancellable, and rejects cross-user/instance handles.
 - Add bounded structured logs, crash artifacts, local correlation IDs, and opt-in trace points across guest, VM, renderer, and UI. Production builds contain no network sink, analytics/crash SDK, automatic uploader, stable tracking identifier, or remote experimentation path; users preview/redact and manually export diagnostics.
 - Add a checked-in first-party egress manifest and production-build rule that fails on an undeclared network-capable component, telemetry dependency, or remote log sink.
 
@@ -47,6 +47,7 @@ Purpose: Establish reproducible native builds and a maintainable VM/device base.
 - Waydroid reference inputs: runtime, hardware, and vendor repositories. Keep Linux LXC/Wayland host code out of the shipping runtime; track any guest/HAL import with its source revision and license.
 - LineageOS reference inputs: manifest/framework microG changes, ATV device tree, TvSystemUI, overlays, key layouts, and device-support requirements. Maintain these as a small rebased patch queue over AOSP, not a full platform fork.
 - Create payload-free build/test targets for `NativeBridgeProvider` descriptors so CI never requires Houdini or `libndk_translation` binaries.
+- Create payload-free build/test targets for `ServiceMode`, `GAppsProvider`, and `RootMode`. CI uses synthetic/free GApps fixtures, builds pinned KernelSU/Magisk source variants, proves a clean `NoApp + Off` artifact, and never stores proprietary GApps or unreviewed root-module payloads.
 
 ## Exit criteria
 

@@ -38,15 +38,18 @@ Purpose: Replace Android-x86 9 and missing LeapDroid guest components with a sha
 - Edition service selects Desktop task/surface export or TV single-display presentation before SystemUI starts; this is immutable for the lifetime of an instance.
 - Base Desktop integration on Android 17 per-display desktop windowing where it passes the Phase 0 architecture gate. Keep WindowManager/TaskDisplayArea authoritative and use Android configuration/lifecycle dispatch rather than scaling a fixed framebuffer behind the app's back.
 
-## Open application services
+## Application service modes
 
-- Preinstall a pinned, official F-Droid Client and enable only the signed official F-Droid repository by default; users may add repositories through an explicit trust flow.
-- Define `Core` provisioning as AOSP + F-Droid and `Compatible` as Core + microG enabled. Switching policy must not fork or destroy userdata.
-- Integrate officially signed microG GmsCore/Companion and only approved supporting modules as prebuilts with verified certificates and reproducible provenance.
-- Keep microG and F-Droid in ordinary app sandboxes with user-revocable network access. Do not grant microG a general privileged UID or F-Droid a privileged installer unless the narrowly scoped, signer-restricted design passes its separate gate.
-- Add current framework support for signature spoofing but restrict it by both package name and pinned microG signing certificate. Add negative tests for every other package.
-- Make microG, device registration, Cloud Messaging, and network-location backends separately opt-in and reversible. Surface microG self-check and known API gaps in Settings.
-- Use normal Package Installer confirmation initially. Any F-Droid privileged install helper requires its own signer allowlist, SELinux domain, narrow IPC contract, audit log, update strategy, and security sign-off.
+- Provision exactly one immutable `ServiceMode` per instance: `NoApp`, `microG`, or `GApps`; default to `NoApp`. Every mode supports the host APK installer and optional developer ADB.
+- `NoApp` contains no optional app store or compatibility-service bundle. Add negative artifact/package/permission/egress tests so F-Droid, microG, GApps, Google accounts/tokens, and provider state cannot leak into it.
+- `microG` contains a pinned official F-Droid Client and approved microG packages with verified signing/reproducibility provenance. Enable only F-Droid's signed official repository by default; keep both apps sandboxed, restrict signature spoofing by package and certificate, and make device registration, Cloud Messaging, location, and network access independently opt-in.
+- `GApps` consumes only a compatible package explicitly selected by the user through the payload-free transactional provider defined in Phase 2B. Never bundle, discover, download, extract, or mix it with microG, and never claim Google certification or complete app/API compatibility.
+- Switching modes creates or clones a new instance; never carry system packages, accounts, credentials, tokens, or privileged state between modes. Use normal Package Installer confirmation initially; any privileged F-Droid helper requires separate signer/domain/IPC/audit/update approval.
+
+## Developer root providers
+
+- Provision an independent immutable `RootMode=Off|KernelSU|Magisk`; default to `Off`, permit only one provider, and keep rooted images in Advanced/Developer channels.
+- Use the reproducible, separately signed boot/kernel artifacts, default-deny per-app grants, safe mode, module recovery, updates, rollback, and target gates in Phase 2C. Never disable AVB/dm-verity or SELinux, grant host authority, or ship concealment/attestation/DRM/banking/anti-cheat bypass features.
 
 ## Windows x64 Native Bridge
 
@@ -74,7 +77,8 @@ Purpose: Replace Android-x86 9 and missing LeapDroid guest components with a sha
 - SELinux is enforcing with no broad permissive domains.
 - System images are deterministic, signed, and updateable independently from userdata.
 - A defined CTS smoke plan passes on x86_64 and arm64.
-- F-Droid verifies signed indexes/APK hashes; Core/Compatible switching and microG opt-outs survive update/reset tests.
+- `NoApp`, `microG`, and user-imported `GApps` pass package-absence, provisioning, isolation, update, clone, reset, health-check, and rollback tests; F-Droid verifies indexes/APK hashes and microG opt-outs remain reversible.
+- `Off`, KernelSU, and Magisk pass clean-absence/build/grant/module/safe-mode/recovery/update/rollback tests on every eligible target without weakening AVB, SELinux, or the VM/host boundary.
 - Every enabled Native Bridge provider passes import, ABI, JNI, signal, linker, crash-containment, cache-switch, and rollback suites.
 - Auto/Phone/Tablet changes are isolated per task/display, emit truthful `Configuration` values, handle or recreate the affected activity correctly, use Android size-compatibility for constrained apps, and roll back crash loops without changing other running apps.
 - Per-app Network/Sensors controls, SELinux/seccomp policies, dynamic-code rules, profile isolation, local-only diagnostics, and targeted memory hardening pass negative tests, CTS/VTS gates, and the Phase 6A performance budget.

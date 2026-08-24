@@ -8,7 +8,7 @@ Purpose: Make privacy and containment enforceable product properties while prese
 - Production Trinity and LeapDroid emit no automatic product telemetry. There is no analytics SDK, usage tracker, automatic crash uploader, remote logger, experimentation client, stable installation/device tracking ID, or undocumented metrics endpoint.
 - This is not an opt-out switch. Production builds omit the upload capability and release CI proves its absence through dependency inspection, endpoint scanning, and runtime network captures.
 - Diagnostics are local, bounded, redacted, user-viewable, and exported only after an explicit user action. Development-only instrumentation is compile-time or locally policy-gated and cannot enter signed production artifacts.
-- Functional traffic remains possible: user application traffic, F-Droid synchronization, explicitly enabled microG functions, signed updates, and user-configured DNS/time/connectivity/location services. Each is documented, independently controllable where technically possible, and distinguished from telemetry.
+- Functional traffic remains possible: ordinary user apps, F-Droid/explicitly enabled microG, user-installed GApps, rooted apps/modules, signed updates, and user-configured DNS/time/connectivity/location services. Each class is documented, independently controllable where technically possible, and distinguished from first-party telemetry.
 - The guarantee covers first-party Trinity/LeapDroid host and guest components. It cannot disable telemetry built into Windows/macOS or guarantee the behavior of user-installed apps; per-app guest network control and optional default-deny templates reduce that exposure.
 
 ## GrapheneOS reuse boundary
@@ -36,7 +36,7 @@ First audit queue:
 Explicit exclusions:
 
 - Do not adopt the whole GrapheneOS manifest or turn GrapheneOS into a merge dependency.
-- Do not import Sandboxed Google Play; the product uses F-Droid and optional microG.
+- Do not copy GrapheneOS Sandboxed Google Play implementation or services. The project's user-supplied `GApps` mode is a separate payload-free provider design and receives none of GrapheneOS's containment or security claims.
 - Do not import Pixel firmware, radio, USB-C, telephony, hardware attestation, or other physical-device-only work.
 - Do not depend on GrapheneOS network infrastructure or copy its service defaults without a subsystem-specific review.
 - Do not use GrapheneOS branding or claim equivalent hardening, verification, hardware roots of trust, or security support.
@@ -51,6 +51,8 @@ Explicit exclusions:
 - Add a Sensors toggle for sensor classes not already covered by dedicated Android runtime permissions. Scope policy per Android user/profile and make reset/backup semantics explicit.
 - Keep microG in a normal app sandbox. Signature spoofing is limited by package name and pinned certificate; device registration, Cloud Messaging, location backends, and network access remain separate opt-ins.
 - Keep F-Droid in a normal app sandbox with normal user-confirmed installation initially. Any privileged extension requires a signer-restricted IPC/service/domain design and independent security approval.
+- Keep `ServiceMode=NoApp|microG|GApps` immutable and isolated; `NoApp` has no optional service/store packages, and the GApps add-on is user-selected, sealed/read-only, never mixed with microG, and unable to weaken AVB, SELinux, or the VM/host boundary.
+- Keep `RootMode=Off|KernelSU|Magisk` immutable, default `Off`, and mutually exclusive. A rooted provider lowers guest-sandbox assurance only; it never changes host broker capabilities. Treat modules as arbitrary guest-root code and retain host-owned safe boot/recovery.
 - Treat Native Bridge providers as higher-risk native code. Provider payloads remain read-only, versioned, separately cached, switchable only while stopped, and unable to weaken SELinux, AVB, linker namespaces, or the base guest ABI policy.
 
 ## Host process and capability model
@@ -72,6 +74,7 @@ No guest-controlled data parser runs in the privileged UI or the process that ow
 | Updater | Static signed metadata/package endpoints, staged artifact install | No telemetry IDs/cookies, guest content, clipboard/input, arbitrary URL, or unsigned payload; transactional rollback only |
 | Diagnostics viewer/exporter | Local bounded logs/crashes and user-selected export destination | No automatic network, background export, raw secrets by default, or modification of evidence; preview/redaction required |
 | Native Bridge inspector | User-selected provider package, host malware scan, private versioned store | No network/download/search, execution before validation, general home access, or mutation of base images; strict archive/ELF limits |
+| GApps/root-artifact inspector and recovery | User-selected local archive, pinned source artifact, sealed add-on/boot slots, health state and safe boot | No network/download/search, general home access, base-image mutation, host capability grant, arbitrary module store, concealment, or bypass payload; strict archive/manifest/partition limits |
 
 Every IPC method specifies caller identity, instance/user namespace, capability token, payload schema and limit, timeout/cancellation, idempotency, version behavior, audit event, and failure cleanup. Bulk data uses bounded shared memory after metadata validation; control messages never embed unbounded blobs.
 
@@ -82,13 +85,13 @@ Every IPC method specifies caller identity, instance/user namespace, capability 
 - Place each process tree in a Job Object with memory, CPU, process-count, handle, and termination policies appropriate to its role; collect resource accounting locally.
 - Enable applicable compile/link and runtime mitigations: DEP, ASLR, CFG, CET/shadow stack on supported hardware, stack protections, and capability-gated dynamic-code/image-load policies. Test every mitigation against ANGLE/Gfxstream/QEMU and do not request broad exceptions for the entire product.
 - Apply explicit named-pipe/RPC/shared-memory ACLs, handle non-inheritance by default, brokered file/device handles, and per-process Windows Firewall policy.
-- Keep the renderer, media decoders, clipboard/notification parsers, Native Bridge inspector, and diagnostics exporter outside the UI/installer trust boundary and independently restartable.
+- Keep the renderer, media decoders, clipboard/notification parsers, Native Bridge/GApps/root-artifact inspectors, root recovery, and diagnostics exporter outside the UI/installer trust boundary and independently restartable.
 
 ## macOS sandbox implementation
 
 - Enable Hardened Runtime and notarization for every production executable. Grant only required entitlements and maintain an executable-by-executable entitlement inventory.
 - Use App Sandbox for the shell and compatible helpers. Use security-scoped bookmarks only for user-selected content, stop access promptly, and avoid broad temporary exceptions.
-- Implement renderer, media, clipboard/notification, file/device, updater, diagnostics, and import roles as narrow XPC services where compatible. Validate connection identity and message bounds before granting any capability.
+- Implement renderer, media, clipboard/notification, file/device, updater, diagnostics, Native Bridge/GApps/root-artifact import, and recovery roles as narrow XPC services where compatible. Validate connection identity and message bounds before granting any capability.
 - Prove the exact HVF/hypervisor, Metal/GPU, JIT/dynamic-code, and service-management constraints in Phase 0. If a component cannot be App-Sandboxed, isolate its narrow entitlement in a signed least-privilege helper and document the boundary rather than disabling App Sandbox globally.
 - Use App Group containers only for the minimum explicitly shared state. Userdata, update staging, diagnostics, provider payloads, and per-instance credentials remain separated with least file access.
 - Use macOS memory/thermal/energy pressure notifications and on-demand XPC lifecycle to stop idle helpers and reduce both attack surface and background resource use.
@@ -107,6 +110,7 @@ Every IPC method specifies caller identity, instance/user namespace, capability 
 - Updates retrieve static signed manifests and content-addressed packages without stable identifiers, tracking cookies, or per-install query parameters. Rollout uses release channels and locally deterministic policy.
 - F-Droid traffic belongs to the guest client and its configured repositories; do not proxy it through a first-party analytics/catalog service.
 - microG traffic exists only when its individual functions are enabled and remains identifiable in the UI/network policy as third-party compatibility traffic.
+- User-installed GApps and rooted apps/modules are third-party guest traffic, never first-party product telemetry; label their network authority and risks without proxying, inspecting, or silently enabling it.
 - Prefer host-provided wall/monotonic time. Connectivity checks, captive-portal probes, DNS, network time, and location backends are documented, user-configurable or disableable, and absent in an offline profile.
 - User applications obey Android network policy. Offer per-app Network toggles and optional new-install default-deny templates, while explaining compatibility impact.
 
@@ -145,12 +149,12 @@ When a mitigation misses a gate: optimize it; rerun all security and performance
 ## Verification matrix
 
 - Static scans: forbidden SDKs, URLs/endpoints, socket-capable dependencies, exported IPC, entitlements/capabilities, executable-memory/JIT exceptions, signing, SBOM, and provenance.
-- Network captures: clean install, first boot, idle 30 minutes, app launch, induced guest/host crash, local diagnostic export, update success/failure, suspend/resume, shutdown, F-Droid sync, and each microG opt-in state.
+- Network captures: clean install, first boot, idle 30 minutes, app launch, induced guest/host crash, local diagnostic export, update success/failure, suspend/resume, shutdown, and every eligible `ServiceMode`/`RootMode`, including F-Droid sync, each microG opt-in, GApps idle/sync, and rooted module/app traffic.
 - Guest isolation: cross-UID/profile file/Binder/socket access, SELinux denials, seccomp violations, network/sensor revocation, dynamic-code denial, malformed intents/AIDL, resource exhaustion, snapshot restore, and update/rollback.
 - Host isolation: token/entitlement denial, IPC impersonation/replay, handle/port leakage, path traversal/symlink race, parser fuzzing, firewall denial, process escape, quota exhaustion, crash restart, and cross-user/instance attempts.
 - Native-shell isolation: hostile labels/icons/URIs, AppUserModelID or Spotlight identity collision, cross-user/task activation, profile/configuration replay, virtual-display exhaustion, macOS launcher-shim signature/entitlement validation, and AppShell crash/restart.
-- High-risk parsers: graphics command streams, media, HTML/images/icons, archives/ELF/provider manifests, protocol schemas, update manifests, and diagnostic artifacts.
-- Compatibility: Core/Compatible profiles, F-Droid, microG APIs, Native Bridge Off/Houdini/`libndk_translation`, Desktop/TV, all three host architecture pairs, and app-specific dynamic-code/network exceptions.
+- High-risk parsers: graphics command streams, media, HTML/images/icons, archives/ELF/provider/GApps/root manifests, partition images, protocol schemas, update manifests, and diagnostic artifacts.
+- Compatibility: `NoApp`/`microG`/`GApps`, `Off`/KernelSU/Magisk, F-Droid, microG/GApps APIs, Native Bridge Off/Houdini/`libndk_translation`, Desktop/TV, all three host architecture pairs, and app-specific dynamic-code/network exceptions.
 - Performance A/B: boot/resume, cold/warm launch, UI frame pacing, input/cursor/controller latency, audio, broker IPC, clipboard/notification latency, memory/CPU/GPU/disk/energy, TV 1080p/4K navigation, and long-play media.
 
 ## Delivery sequence
@@ -186,6 +190,6 @@ When a mitigation misses a gate: optimize it; rerun all security and performance
 - AOSP remains canonical; every GrapheneOS-derived change is provenance-tracked, measured, removable, and free of Pixel-specific/service/branding dependency.
 - Guest UID/profile, SELinux, seccomp, Binder, file, Network/Sensors, dynamic-code, and resource boundaries pass abuse and CTS/VTS gates.
 - Windows and macOS process/capability matrices are enforced on every shipping executable; no helper has an undocumented entitlement, token privilege, file/device grant, or egress permission.
-- Renderer, media, clipboard/notification parsers, update parser, diagnostics exporter, and Native Bridge inspector pass fuzz, quota, crash-restart, and sandbox-escape review with no unresolved critical/high finding.
+- Renderer, media, clipboard/notification parsers, update parser, diagnostics exporter, and Native Bridge/GApps/root-artifact inspectors pass fuzz, quota, crash-restart, and sandbox-escape review with no unresolved critical/high finding.
 - All hardening changes meet the CPU, memory, app-launch, jank, broker-latency, input, and TV/media performance gates, or have a narrowly scoped approved exception with owner and expiry.
-- Documentation clearly separates first-party zero telemetry, optional functional services, third-party app traffic, and host-OS behavior without overclaiming GrapheneOS equivalence.
+- Documentation clearly separates first-party zero telemetry, optional service/root traffic, ordinary third-party app traffic, and host-OS behavior without overclaiming GrapheneOS equivalence, Google certification, or rooted-app compatibility.
