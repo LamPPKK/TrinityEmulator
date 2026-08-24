@@ -1,131 +1,99 @@
-## Trinity: High-Performance Mobile Emulation through Graphics Projection
-![version](https://img.shields.io/badge/Version-Beta-yellow "Beta") ![license](https://img.shields.io/badge/GuestOS-Androidx86-green "Android") ![license](https://img.shields.io/badge/Licence-GPLv2-blue.svg "Apache") ![status](https://github.com/TrinityEmulator/TrinityEmulator/actions/workflows/main.yml/badge.svg) [![DOI](https://zenodo.org/badge/479100313.svg)](https://zenodo.org/badge/latestdoi/479100313)
+# Trinity Emulator
 
-This is the Artifact README for Trinity---an Android emulator designed to simultaneously meet the goals of good compatibility, security and efficiency with our novel notion of graphics projection space.
+Trinity is being rebuilt as a WSA-like Android subsystem for Windows 11. The new generation targets Windows x64 and Windows ARM64, with separate Android Desktop and Android TV editions sharing one modern runtime and host/guest protocol with LeapDroid for macOS.
 
-<p float="left" align="middle">
-<img align="top" src=https://user-images.githubusercontent.com/32576375/209423491-b2e816f2-b641-446d-9b7f-3ff8c29db773.gif width="49%"/>
-<img align="top" src=https://user-images.githubusercontent.com/32576375/209423951-efd6b3d4-5785-4e11-9365-09b90b26c76f.gif width="49%"/>
-</p>
+> **Current status:** architecture and repository reset. The old QEMU 5.0/Android-x86 implementation is preserved on the [`legacy`](https://github.com/LamPPKK/TrinityEmulator/tree/legacy) branch. The `main` branch is the clean foundation for the native rewrite and is not yet runnable.
 
+The canonical implementation plan is in [`docs/devel/trinity-leapdroid-development-plan`](docs/devel/trinity-leapdroid-development-plan/README.md). Start with the [overall plan](docs/devel/trinity-leapdroid-development-plan/plan.md), then use the phase documents as release gates.
 
-### 1. Getting Started with Trinity
+## Product targets
 
-* **Hardware Requirements**
+| Product | Host | Guest ABI | Virtualization | Graphics baseline |
+|---|---|---|---|---|
+| Trinity Desktop | Windows 11 x64 | x86_64 | WHPX | Gfxstream + ANGLE/D3D11; SwiftShader fallback |
+| Trinity TV | Windows 11 x64 | x86_64 | WHPX | Gfxstream + ANGLE/D3D11; SwiftShader fallback |
+| Trinity Desktop | Windows 11 ARM64 | arm64 | WHPX ARM64, capability-gated | Gfxstream + ANGLE; SwiftShader fallback |
+| Trinity TV | Windows 11 ARM64 | arm64 | WHPX ARM64, capability-gated | Gfxstream + ANGLE; SwiftShader fallback |
 
-    You should run Trinity on a *WinTel (Windows-x64 on Intel) machine, with an NVIDIA dedicated GPU installed with the latest driver (over version 497.09) if possible* (no dedicated GPU is also acceptable), as this hardware/software combination is much more tested than the others. **Minimal** hardware configurations include:
-    - 4-core CPU
-    - 8 GB memory
-    - 1920x1080 display
-    - 128 GB storage
+## Development checklist
 
-* **Software Prerequisites**
-  1. Ensure that you have turned on Intel VT in the BIOS settings. By default, this is turned on for most PCs.
-  2. Check whether Windows' Hyper-V if it's enabled ([how to determine Hyper-V's state](https://docs.microsoft.com/en-us/troubleshoot/windows-client/application-management/virtualization-apps-not-work-with-hyper-v#determine-whether-the-hyper-v-hypervisor-is-running)).
-  3. If not, install Intel HAXM (recommended version is [v7.6.5](https://github.com/intel/haxm/releases/download/v7.6.5/haxm-windows_v7_6_5.zip). Extract the downloaded ZIP file, and simply double-click `haxm-7.6.5-setup.exe` to install. 
+Checkboxes describe implementation and release status on `main`. An item is checked only after its phase exit criteria and tests pass.
 
-  * NOTE: Hyper-V generally provides better CPU performance over HAXM. 
-  So we recommend using Hyper-V if possible. Our program is capable of detecting Hyper-V and automatically choosing it when applicable. 
-  Also, on Windows 22H2, HAXM seems to show some buggy behaviors that prevent the guest OS from loading into the virtual memory, in which case it's better you enable Hyper-V instead.
+### Repository and runtime foundation
 
-* **Running the Released Binary**
+- [x] Preserve the complete previous implementation and history on `legacy`.
+- [x] Publish the joint Trinity/LeapDroid architecture and phased development plan.
+- [ ] Complete Phase 0 feasibility gates and record architecture decisions.
+- [ ] Fix repository, process, IPC, and licensing boundaries for the shared runtime and native hosts.
+- [ ] Pin a current supported QEMU release and maintain a small, reviewable patch queue.
+- [ ] Implement versioned control, presentation, input, clipboard, notification, surface, and bulk-data protocols.
+- [ ] Add reproducible native Windows x64 and ARM64 build toolchains and CI.
+- [ ] Add signed development packages, SBOMs, provenance, license reports, and rollback-capable updates.
 
-    We provide a packaged binary [here](https://github.com/TrinityEmulator/TrinityEmulator/releases/tag/Trinity-Release). Download and extract the ZIP file, double-click the executable `Trinity.exe` in the extracted folder to run. Press `Enter` when the boot option is `Run Android-x86 without installation`.
+### Android guest and app compatibility
 
-### 2. Detailed Instructions    
-#### 2.1. Guest OS Installation
+- [ ] Pin a current stable AOSP/GKI baseline with x86_64 and arm64 products.
+- [ ] Build separate Desktop and Android TV images over a shared system/vendor base.
+- [ ] Implement boot, stop, reset, suspend/resume, snapshots, storage quotas, and multi-instance lifecycle.
+- [ ] Support APK install/uninstall, package discovery, host launcher registration, deep links, and opt-in ADB.
+- [ ] Do not bundle GApps, Google Play Store, Google Play Services, or other proprietary Google system packages.
+- [ ] Preinstall F-Droid from a verified official release and enable only its official repository by default.
+- [ ] Add an optional microG profile with restricted signature spoofing and independently controlled services.
+- [ ] Detect APK ABI before install and report `native`, `translatable`, or `unsupported`.
+- [ ] On Windows x64, support user-imported Houdini or `libndk_translation` providers through two payload-free adapters; do not bundle or download proprietary binaries.
+- [ ] Maintain CTS, VTS, compatibility, upgrade, and real-application test matrices for every guest SKU.
 
-Running without installation allows you to quickly see what is Trinity capable of. But it also makes the virtual storage volatile (i.e., the next boot will erase all data) and small-size (up to only 8 GB available space).
+### Graphics and native Windows experience
 
-Before you can fully enjoy Trinity, you may want to install the Android-x86 image during system boot. Refer to our [wiki](https://github.com/TrinityEmulator/TrinityEmulator/wiki/Guest-OS-Installation-Guide) for more detailed instructions.  
+- [ ] Deliver compatibility-first accelerated GLES through Gfxstream and ANGLE.
+- [ ] Add Vulkan support after conformance and isolation gates pass.
+- [ ] Keep SwiftShader as a tested software fallback.
+- [ ] Reimplement Trinity graphics projection as an optional backend only after the compatibility renderer is stable.
+- [ ] Present every Android task in a real top-level WinUI 3/C++/WinRT `AppWindow`/HWND.
+- [ ] Integrate native title bars, snap layouts, Alt+Tab, taskbar identity, jump/launcher activation, DPI, multi-monitor, fullscreen, and PiP behavior.
+- [ ] Add per-app `Auto`, `Phone`, and `Tablet` presentation profiles.
+- [ ] Add per-app orientation, adaptive/fixed form factor, size, density, scale, aspect/letterbox, placement, fullscreen/PiP, and safe reset controls.
+- [ ] Apply Android configuration per task/display without changing unrelated applications or the whole guest.
 
-#### 2.2. Usages and Problem Resolving
-Use Trinity as you use your mobile phones. Trinity's guest OS is packed with [@OpenGApps](https://github.com/opengapps/opengapps), therefore you can install any apps from the Google Play Store we host, even ARM-based ones! Other important notes are listed below.
+### Input, host integration, and Android TV
 
-* For establishing `ADB` connection with Trinity, see [here](https://github.com/TrinityEmulator/TrinityEmulator/wiki/Advanced-Usages#adb-connection).
+- [ ] Implement Windows Raw Input keyboard/mouse handling and host IME composition.
+- [ ] Implement absolute pointer, relative capture, cursor synchronization, focus recovery, touch, and stylus paths.
+- [ ] Implement GameInput controller hot-plug, multiple players, stable mappings, battery state, and haptics.
+- [ ] Synchronize clipboard text, sanitized HTML, and bounded images bidirectionally with loop and sensitive-content protection.
+- [ ] Mirror Android notification post/update/remove/open/action/reply/dismiss lifecycle into Windows notifications with per-app/channel policy.
+- [ ] Broker selected host folders, drag/drop, audio, microphone, camera, location, and host link/open-with flows through explicit permissions.
+- [ ] Deliver a 10-foot Android TV launcher/SystemUI, D-pad/gamepad/media-key navigation, push-to-talk, 1080p and 4K SDR profiles, and TV-aware app discovery.
+- [ ] Keep TV clipboard off by default and make notification previews opt-in and allowlisted.
 
-* If Trinity freezes on certain machines (perhaps during your first boot without installation), see [here](https://github.com/TrinityEmulator/TrinityEmulator/wiki/Advanced-Usages#shutdown-and-force-shutdown). 
+### Privacy, sandboxing, and release quality
 
-* If Trinity cannot function properly after installation, see [here](https://github.com/TrinityEmulator/TrinityEmulator/wiki/Advanced-Usages#formatting-the-disk).
+- [ ] Enforce a production zero-telemetry profile: no analytics, automatic crash upload, remote logging, experiments, stable tracking ID, or hidden metrics endpoint.
+- [ ] Provide bounded local diagnostics with redaction preview and explicit manual export only.
+- [ ] Enforce a checked-in first-party egress manifest and packet-capture tests for startup, idle, crash, update, suspend/resume, and app launch.
+- [ ] Preserve Android per-UID isolation and harden SELinux, seccomp, spawning, memory safety, dynamic-code policy, and per-app network/sensor controls using reviewed GrapheneOS patterns.
+- [ ] Isolate the UI, VM controller, renderer, media, updater, diagnostics, Native Bridge inspector, and integration brokers with least privilege, AppContainer, Job Objects, and authenticated capability-scoped IPC.
+- [ ] Audit WSA Linux kernel, Waydroid guest/HAL, LineageOS microG/TV, and GrapheneOS security changes with pinned provenance and explicit `import`, `reimplement`, or `drop` decisions.
+- [ ] Meet boot, resume, frame pacing, input latency, memory, CPU, energy, notification, and TV responsiveness budgets.
+- [ ] Pass security review, fuzzing, long-run stability, upgrade/rollback, accessibility, localization, and release gates on all four Trinity SKUs.
 
-* If Trinity cannot start properly, send us the `log.txt` file in the root directory of the binary.
+## Delivery order
 
-#### 2.3. Result Reproducing
+1. [Phase 0 — decision and feasibility gates](docs/devel/trinity-leapdroid-development-plan/phase-0-decision-gates.md)
+2. [Phase 1 — shared runtime foundation](docs/devel/trinity-leapdroid-development-plan/phase-1-runtime-foundation.md)
+3. [Phase 2 — Android guest](docs/devel/trinity-leapdroid-development-plan/phase-2-android-guest.md) and [Phase 2A — Android TV](docs/devel/trinity-leapdroid-development-plan/phase-2a-android-tv.md)
+4. [Phase 3 — graphics](docs/devel/trinity-leapdroid-development-plan/phase-3-graphics.md)
+5. [Phase 4 — seamless windows](docs/devel/trinity-leapdroid-development-plan/phase-4-seamless-windows.md), [input](docs/devel/trinity-leapdroid-development-plan/phase-4a-input-cursor-controller.md), and [native app/display profiles](docs/devel/trinity-leapdroid-development-plan/phase-4b-native-app-experience-display-profiles.md)
+6. [Phase 5 — host integration](docs/devel/trinity-leapdroid-development-plan/phase-5-host-integration.md) and [clipboard/notifications](docs/devel/trinity-leapdroid-development-plan/phase-5a-clipboard-notifications.md)
+7. [Phase 6 — security, updates, and compliance](docs/devel/trinity-leapdroid-development-plan/phase-6-security-update-compliance.md) plus [zero telemetry and sandboxing](docs/devel/trinity-leapdroid-development-plan/phase-6a-zero-telemetry-sandbox.md)
+8. [Phase 7 — hardening and release](docs/devel/trinity-leapdroid-development-plan/phase-7-hardening-release.md)
 
-We provide 1) our own measurement data and script to reproduce the figures in our paper, and 2) detailed guides and videos for running our experiments independently.
+## Legacy source and licensing
 
-Please go to our [wiki page](https://github.com/TrinityEmulator/TrinityEmulator/wiki#reproducing-results) for more details.
+Use the `legacy` branch to inspect or reproduce the previous Trinity artifact:
 
-### 3. Artifact Claims
-
-* **Reproducibility.** To reproduce results similar to that shown in our paper, hardware configurations of your evaluation machines are of vital importance. This is because our key results of graphics benchmarks test the ***extreme performance*** of the evaluated emulators. In particular, even if the hardware configurations are exactly the same, the running states of the host machines (e.g., CPU/GPU occupation and heat level) can also impact the results. We recommend you check your hardware settings before evaluation as suggested [here](https://github.com/TrinityEmulator/TrinityEmulator/wiki/Graphics-Benchmark#experimental-setup).
-
-* **Stability.** Trinity is not yet stable, especially the version we release is that of the paper submission time to prevent recent fixes/improvements from affecting the evaluation results. Therefore, freezing and crashing can sometimes happen, normally a system reboot can resolve the issues. 
-
-The following parts of README are not important to the running of Trinity and result reproducing, feel free to skip them if you do not wish to build Trinity from scratch.
-
-
-### 4. Code Organization
-Trinity is based on QEMU 5.0. Most of the code here remains consistent with the upstream QEMU, while our modifications are mostly decoupled modules. Therefore it's easy to upgrade to higher versions of QEMU (tested also on QEMU 5.1). We detail our modifications as follows:
-
-|  Module  |  Purpose  |
-|  ----  | ----  |
-| `hw/direct-express` | This additional module implements the `data teleporting` mechanism described in our paper, which is a general-purpose data transfering pipeline between the guest and host. Leveraging a specially designed packet protocol, one can realize fast bidirectional data delivering under considerable system and data dynamics. The module here mostly serves the purpose of retrieving data from the guest and dispatches the data to a designated thread specified by the data packet. |
-| `hw/express-gpu` | This module implements the host rendering engine that leverages the shadow contexts and resource handles in the `graphics projection space` to manage real contexts and resources at the host, while drawing actual frames on a window. It also provides host-side hints for realizing `flow control`. |
-
-Other minor changes to the vanilla QEMU includ the general keyboard mapping and input device to achieve cross-platform compatibility.
-
-### 5. Build
-
-We use git submodule to hold some of the essential modules. Thus, after `git clone`, you should also run `git submodule update --init --recursive` at the repo's root directory.
-
-#### Windows
-* **Environment & Dependencies**
-
-    The building of Trinity on Windows (tested on 64-bit Win 10/11 Home/Professional/LTSC) should be performed under the `MSYS2` environment. Your environment setup should include:
-
-   1. Download and install MSYS2 following the instructions at [https://www.msys2.org/](https://www.msys2.org/). ***CRITICAL NOTE*: DO NOT INSTALL MSYS AT PATH THAT CONTAINS A SPACE, e.g., C:/Program Files**.
-   2. Open the **MSYS2 MinGW x64** terminal (***CRITICAL NOTE*: NOT THE MSYS2 MSYS TERMINAL**) and install dependencies using:
-   
-      ``pacman -S base-devel git mingw-w64-x86_64-binutils mingw-w64-x86_64-crt-git mingw-w64-x86_64-headers-git mingw-w64-x86_64-gcc-libs mingw-w64-x86_64-gcc mingw-w64-x86_64-gdb mingw-w64-x86_64-make mingw-w64-x86_64-tools-git mingw-w64-x86_64-pkg-config mingw-w64-x86_64-winpthreads-git mingw-w64-x86_64-libwinpthread-git mingw-w64-x86_64-winstorecompat-git mingw-w64-x86_64-libmangle-git mingw-w64-x86_64-pixman mingw-w64-x86_64-SDL2 mingw-w64-x86_64-glib2 mingw-w64-x86_64-capstone mingw-w64-x86_64-glfw mingw-w64-x86_64-lzo2 mingw-w64-x86_64-libxml2 mingw-w64-x86_64-libjpeg-turbo mingw-w64-x86_64-libpng``
-   3. Additional environmental adjustments (also executed at the MSYS terminal):
-   
-      ``cp /mingw64/bin/ar.exe /mingw64/bin/x86_64-w64-mingw32-ar.exe & cp /mingw64/bin/ranlib.exe /mingw64/bin/x86_64-w64-mingw32-ranlib.exe & cp /mingw64/bin/windres.exe /mingw64/bin/x86_64-w64-mingw32-windres.exe & cp /mingw64/bin/objcopy.exe /mingw64/bin/x86_64-w64-mingw32-objcopy.exe  & cp /mingw64/bin/nm.exe /mingw64/bin/x86_64-w64-mingw32-nm.exe & cp /mingw64/bin/strip.exe /mingw64/bin/x86_64-w64-mingw32-strip.exe``
-* **Configure**
-
-    `cd` to the root directory of the repo at the MSYS terminal (note that you *cannot* use a typical Windows path such as `C:/XXX` for `cd`, instead you can simply drag and drop the repo to the terminal to acquire its path in MSYS), input the following to configure:
-    `./configure --cross-prefix=x86_64-w64-mingw32- --disable-gtk --enable-sdl --enable-whpx --target-list=x86_64-softmmu --disable-werror`
-* **Compile**
-
-    After the configuration, simply type `make install -j$(nproc)`.
-
-* **Run the Built Trinity**
-
-    We provide a proxy executable for running Trinity. Therefore, all you need to do is: 
-    Download the guest system’s images (`Android_x86_64.iso` and `hda.img`) and the executable (`Trinity.exe`) packed in [the Trinity.zip file](https://github.com/TrinityEmulator/TrinityEmulator/releases/tag/Trinity-Release), put them at the root directory of the repo, and execute the executable at the **MSYS2 MinGW x64** terminal (directly click on the file may not work due to missing dlls) to run Trinity.
-    
-    Otherwise, if you wish to run Trinity in terminals rather than the executable, you can run the following command at the root directory of Trinity if you use Hyper-V
-    ```
-    .\\x86_64-softmmu\\qemu-system-x86_64.exe -accel whpx -cpu android64 -m 4096 -smp 4 -machine usb=on -device usb-kbd -device usb-tablet -boot menu=on -soundhw hda -net nic -net user,hostfwd=tcp::5555-:5555 -device direct-express-pci -display sdl -hda hda.img -cdrom android_x86_64.iso
-    ```
-    If you use HAXM, run the following
-    ```
-    .\\x86_64-softmmu\\qemu-system-x86_64.exe -accel hax -cpu android64 -m 4096 -smp 4 -machine usb=on -device usb-kbd -device usb-tablet -boot menu=on -soundhw hda -net nic -net user,hostfwd=tcp::5555-:5555 -device direct-express-pci -display sdl -hda hda.img -cdrom android_x86_64.iso
-    ```
-
-### 6. Developing
-To debug the code, you can use the GDB provided by MSYS2. You may need to examine which GDB is used by checking the output of configuration. The last few lines should contain the location of the used GDB. Normally, it should be `/mingw64/bin/gdb-multiarch.exe` or `/mingw64/bin/gdb.exe`
-### 7. Licensing 
-Our code is under the GPLv2 license.
-
-### 8. Reference
-If you use Trinity in your work, please reference it using
+```shell
+git clone --branch legacy --recurse-submodules https://github.com/LamPPKK/TrinityEmulator.git
 ```
-@inproceedings {gao2022trinity,
-    author = {Gao, Di and Lin, Hao and Li, Zhenhua and Huang, Chengen and Liu, Yunhao and Qian, Feng and Gong, Liangyi and Xu, Tianyin},
-    title = {{Trinity: High-Performance Mobile Emulation through Graphics Projection}},
-    booktitle = {The 16th {USENIX} Symposium on Operating Systems Design and Implementation ({OSDI} 22)},
-    year = {2022},
-    publisher = {{USENIX} Association}
-  }
-```
+
+Do not forward-port the old tree wholesale. Import only justified behavior, tests, or small reviewed patches with provenance. QEMU-derived components remain subject to GPLv2 and their original notices; new components must keep explicit, compatible license boundaries. See `LICENSE`, `COPYING`, `COPYING.LIB`, and the plan's licensing section.
