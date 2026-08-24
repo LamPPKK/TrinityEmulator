@@ -92,6 +92,7 @@ Purpose: Eliminate platform risks before committing to the multi-year implementa
 - Prove immutable `ServiceMode=NoApp|microG|GApps`, default `NoApp`, cross-mode package/account/token absence, clone-to-switch semantics, and a host APK installer in every mode.
 - Build F-Droid Client and microG packages from pinned official sources or verify official prebuilt signatures and reproducibility metadata. Prove signer/package-restricted signature spoofing and test microG self-check, service opt-ins, F-Droid verification, updates, disable, and reset.
 - Prototype the payload-free GApps provider with synthetic/free fixtures only: sandboxed local import, strict descriptor/content/signature/hash/privilege validation, sealed read-only add-on, AVB/SELinux preservation, transactional boot health, rollback, removal, and an uncertified/best-effort UX.
+- Run a separate certified-provider feasibility gate for `GApps + RootMode=Off`: obtain written Google/GMS/Play Protect program disposition, define legitimate attestation provisioning and expected Play Integrity verdicts, record SafetyNet legacy status, obtain Widevine licensing/device-integration disposition and achievable security level, and agree a regional banking blocking suite with app-owner-approved testing. No user-imported payload or copied device key can satisfy this gate.
 - Prove immutable `RootMode=Off|KernelSU|Magisk`, default `Off`, reproducible separate boot/kernel artifacts, default-deny grants, safe mode/recovery, clean absence, and host/VM boundary preservation. Target-gate KernelSU x86_64 if syscall hardening would be weakened; keep Magisk Zygisk off by default.
 - Review the current F-Droid Privileged Extension before allowing unattended installs; default to Android user-confirmed installation if the review is not complete.
 
@@ -125,7 +126,7 @@ Purpose: Eliminate platform risks before committing to the multi-year implementa
 ### Legal and product proof
 
 - Produce a dependency license matrix and identify source-offer obligations.
-- Freeze `ServiceMode`/GApps import and `RootMode` policy, F-Droid/microG packaging/privacy, F-Droid install privilege level, codecs/DRM scope, and user-supplied ARM-on-x64 provider policy.
+- Freeze `ServiceMode`/GApps import/certified-provider and `RootMode` policy, F-Droid/microG packaging/privacy, F-Droid install privilege level, Play Integrity/SafetyNet legacy/Widevine/banking gates, codecs/DRM scope, and user-supplied ARM-on-x64 provider policy.
 - Freeze Desktop/TV instance separation, TV launcher source, media codec scope, supported display profiles, and staged Desktop-before-TV release order.
 - Freeze minimum host OS versions and first-release feature tier.
 
@@ -142,7 +143,7 @@ Purpose: Eliminate platform risks before committing to the multi-year implementa
 - Zero-telemetry specification, first-party egress manifest, clean packet-capture evidence, local diagnostics/redaction design, and third-party/host-OS scope statement.
 - Windows and macOS process-sandbox matrix with tokens/entitlements, IPC ACLs, file/network/device access, resource limits, crash boundary, and measured overhead.
 - Android TV feasibility report covering launcher/SystemUI, D-pad focus, per-mode app discovery, media, 1080p/4K presentation, accessibility, and DRM limitations.
-- Service-mode/GApps and KernelSU/Magisk threat, legal, build, recovery, compatibility, and release-gate reports; Houdini/`libndk_translation` legal and technical feasibility reports without redistributing proprietary payloads.
+- Service-mode/GApps and KernelSU/Magisk threat, legal, build, recovery, compatibility, and release-gate reports; certified-provider partner/attestation/Play Integrity/SafetyNet legacy/Widevine/banking feasibility disposition; Houdini/`libndk_translation` legal and technical reports without redistributing proprietary payloads.
 - Input architecture ADR, event/latency traces, shortcut precedence table, cursor-ownership proof, controller mapping format, privacy threat model, and representative hardware results.
 - Clipboard/notification architecture ADR, normalized schemas, permission/consent UX, platform capability matrix, loop/reconciliation model, security threat model, latency/energy results, and content/action fuzz plan.
 - Native-shell ADR covering real host window/process ownership, Windows AppUserModelID/activation, macOS Dock-identity disposition, platform command/lifecycle mapping, accessibility, and the boundary between native chrome and Android app content.
@@ -155,13 +156,14 @@ Purpose: Eliminate platform risks before committing to the multi-year implementa
 - One Android guest design and one host/guest protocol direction are approved.
 - Desktop and TV products boot on all committed architecture pairs, use separate userdata, and share the approved system/vendor/runtime foundation.
 - No unresolved license blocker exists for the planned public preview.
-- `NoApp`, `microG`, and user-imported `GApps` pass provisioning, isolation, update, reset, and rollback tests; no package outside the microG allowlist can spoof a signature, and no proprietary GApps payload is present in source, CI, or release artifacts.
+- `NoApp`, `microG`, and user-imported `GApps` pass provisioning, isolation, update, reset, and rollback tests; no package outside the microG allowlist can spoof a signature, and no user-imported proprietary GApps payload is present in public source, CI, or ordinary release artifacts. Certified partner payloads use a separate access-controlled licensed supply chain.
+- A certified `GApps + Off` target proceeds only with written partner approval and a feasible legitimate identity/attestation, Play Integrity, licensed Widevine, and banking test path; failed targets remain explicitly uncertified and make no protected-app claim.
 - `Off`, KernelSU, and Magisk pass their eligible target gates; root cannot grant a host capability, weaken AVB/SELinux, or leave a rooted artifact/state behind after selecting `Off`.
 - Native Bridge remains `Off` by default; each exposed provider passes legal review, import validation, self-tests, and the agreed ARM-app threshold.
 - Architecture review approves the shared-runtime approach.
 - The input proof has one authoritative backend per device class, no duplicate IME characters, safe pointer-capture recovery, Android-standard gamepad mappings, bounded 8,000 Hz behavior, and measured latency breakdowns.
 - Clipboard proof is loop-free and sensitive-by-default; notification proof updates/removes/actions/replies safely without broad host notification access or stale authority.
-- TV scope makes no Google TV, Widevine L1, HDCP, or commercial streaming compatibility claim.
+- Open/user-import TV scope makes no Google TV, Widevine L1, HDCP, or commercial streaming compatibility claim; any `CertifiedPartner + Off` TV claim is separately licensed, target-specific, and gated by its proven secure-media/service matrix.
 - Ten simultaneous Desktop tasks use real native host windows without fake title bars, cross-task surface/configuration leaks, or VM shutdown on ordinary window close.
 - Auto/Phone/Tablet proofs select correct Android resource/configuration classes, survive profile/monitor/orientation changes, and roll back a failing app without affecting other tasks.
 - The macOS per-package Dock identity result is explicitly `ship`, `defer`, or `drop`; no release claim exceeds the proven signed/notarized behavior.

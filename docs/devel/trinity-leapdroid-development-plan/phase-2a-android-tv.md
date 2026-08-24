@@ -47,11 +47,11 @@ Desktop Auto/Phone/Tablet profiles do not change the TV product's `television` c
 - Begin with H.264 and open/unencumbered baseline formats supported by the selected dependencies; enable HEVC, VP9, AV1, profiles, levels, and encoders only after platform, patent, license, and conformance review.
 - Preserve timestamps, seeking, flush/drain, playback-rate changes, subtitle timing, resolution switches, surface recreation, suspend/resume, and audio/video synchronization.
 - Support stereo PCM first and multichannel PCM after channel-layout/routing tests. Treat Dolby/DTS and compressed bitstream passthrough as separately licensed later features.
-- Reject protected-buffer requests safely and report DRM limitations. Do not emulate Widevine L1, HDCP, secure decoder, hardware TEE, or certified protected playback.
+- Open and user-import builds reject protected-buffer requests safely and report DRM limitations. Do not emulate Widevine L1, HDCP, secure decoder, hardware TEE, or certified protected playback. A `CertifiedPartner + Off` TV artifact enables only the exact licensed and independently certified secure path/tier.
 
 ## Service modes, root, and app policy
 
-- Offer the same immutable `ServiceMode=NoApp|microG|GApps` contract as Desktop, with `NoApp` default and the host APK installer in every mode. `microG` includes verified F-Droid plus approved microG; `GApps` accepts only a user-selected package through Phase 2B and never implies Google TV/Play Protect certification.
+- Offer the same immutable `ServiceMode=NoApp|microG|GApps` contract as Desktop, with `NoApp` default and the host APK installer in every mode. `microG` includes verified F-Droid plus approved microG. User-imported `GApps` remains uncertified; an exact `CertifiedPartner + RootMode=Off` TV artifact requires separate Google TV/Play Protect, attestation, Play Integrity, licensed Widevine/secure-media, and application-service approval through Phase 2B.
 - Test the official F-Droid Client in `microG` mode for D-pad navigation, focus visibility, 10-foot text, repository management, install confirmation, updates, and error recovery.
 - If the official client fails the TV usability gate, implement a minimal TV catalog using reviewed F-Droid signed-index/APK-verification components; retain Android package-install confirmation until privileged installation is separately approved.
 - Offer `RootMode=Off|KernelSU|Magisk` only through the Phase 2C Advanced/Developer gate, default to `Off`, and keep all root grant/module/recovery UI D-pad-operable. Do not let root bypass the host recovery overlay or media/DRM policy.
@@ -76,5 +76,5 @@ Desktop Auto/Phone/Tablet profiles do not change the TV product's `television` c
 - Provisioning, launcher, Settings, per-mode app discovery, root safe mode/recovery, permission prompts, update/recovery, and core apps are fully operable with D-pad only.
 - 1080p and 4K SDR presentation, host audio/video decode fallback, input reconnect, suspend/resume, and renderer/decoder crash recovery meet their gates.
 - TV instances cannot enable Desktop per-task export or reuse Desktop userdata, and edition-specific updates cannot cross-install.
-- No release material implies Google TV/Play Protect certification, guaranteed Play Store access, Widevine L1, HDCP, or commercial streaming compatibility; any user-imported GApps mode remains clearly uncertified and best-effort.
+- No release material implies Google TV/Play Protect certification, guaranteed Play Store access, Widevine L1, HDCP, or commercial streaming compatibility for user-imported GApps. A partner-certified TV claim is permitted only for the exact approved non-root artifact and proven DRM/service matrix.
 - The TV image and host presentation pass Phase 6A sandbox, egress, local-diagnostics, and hardening performance gates without a TV-wide compatibility bypass.

@@ -58,8 +58,9 @@ Root rules:
 - A root grant never creates a host capability. File, clipboard, notification, input, camera, microphone, location, update, diagnostics, Native Bridge, and GApps import brokers continue to require authenticated instance/user capabilities and host consent.
 - On first root enablement, reset all host integration consent to safe defaults and require the user to re-enable sensitive bridges. Rooted TV instances keep clipboard/notifications off and developer interfaces local-only by default.
 - Treat KernelSU/Magisk modules as arbitrary guest-root code. Module installation is advanced-only, requires a stopped/snapshotted instance and explicit warning, and cannot imply review or endorsement.
-- Do not bundle an online module store, remote module search, automatic module downloader, attestation-bypass module, proprietary payload, or community repository trust root.
-- Before accepting a module archive, the host sandbox checks size/path/archive safety and records a local hash, but this does not make scripts safe. Execution occurs only inside the rooted guest; no module can ship or execute host binaries through the import path.
+- Provide a native `Import local module` action for KernelSU and Magisk. Accept a compatible module archive only after the user explicitly selects it from local storage, chooses the rooted instance/provider, reviews package metadata and requested effects, and acknowledges that it is untrusted guest-root code.
+- Do not bundle an online module store, remote module search, automatic module downloader, bypass/concealment payload, proprietary payload, or community repository trust root. The project does not recommend or certify a module's purpose merely because the generic importer accepts its format.
+- Before accepting a module archive, the host sandbox checks provider/format compatibility, size/path/archive safety, records a local hash and signature metadata when present, and rejects host executables or traversal. These checks do not make guest scripts safe. Execution occurs only inside the selected rooted guest; no module can ship or execute host binaries through the import path.
 - Provide a host-owned recovery boot that starts with all modules, Zygisk, and third-party root startup scripts disabled. Users can inspect local boot diagnostics, disable/delete modules, roll back the root artifact, export selected files, or delete the instance without needing a healthy guest UI.
 - Bound module storage, startup time, processes, logs, and crash loops. Repeated failed boots automatically enter recovery and never broaden SELinux or host permissions as a workaround.
 
@@ -81,6 +82,7 @@ Root rules:
 ## Host UX
 
 - Add an Advanced `Root access` panel with `Off`, `KernelSU`, and `Magisk` cards; supported architecture/edition matrix; provider/source/license/version; security delta; disk/memory cost; module/Zygisk state; update compatibility; and create/clone/delete actions.
+- Add a provider-scoped local module importer with native file selection, compatibility/metadata summary, local hash, risk acknowledgement, stopped-instance/snapshot requirement, install progress, enable/disable/remove controls, and direct entry to host-owned safe mode. Do not include discovery, download, ranking, or recommended-module feeds.
 - `Off` is selected by default. Root cards require developer mode plus a typed/explicit acknowledgement that guest app isolation and certification-sensitive applications may fail.
 - Show root grants, last grant/revocation time, module count, provider health, policy version, boot fallback, snapshot status, and update blocker without recording command contents, secrets, or raw app activity.
 - Keep ADB disabled unless separately enabled and paired. Root mode does not automatically enable network ADB, host shell access, port forwarding, or an elevated host process.
@@ -105,7 +107,7 @@ Root rules:
 
 - Root-mode ADR and compatibility matrix across host/guest architecture, edition, service mode, Android build, kernel/KMI, and release channel.
 - Reproducible KernelSU and Magisk source/build/signing/license manifests plus clean-`Off` absence proof.
-- Provider-specific threat models, SELinux/boot deltas, manager trust design, root-grant schema, update/rollback plan, recovery image, fuzz corpora, and security review.
+- Provider-specific threat models, SELinux/boot deltas, manager trust design, root-grant schema, local module-import schema/policy, update/rollback plan, recovery image, fuzz corpora, and security review.
 - Native Windows/macOS root settings, warning, grant-view/revoke, module recovery, update blocker, clone/migration, and deletion UX specifications.
 - Published statement distinguishing rooted guest risk from VM/host containment and prohibiting certification/attestation/DRM/anti-cheat bypass claims.
 

@@ -47,7 +47,7 @@ Purpose: Establish reproducible native builds and a maintainable VM/device base.
 - Waydroid reference inputs: runtime, hardware, and vendor repositories. Keep Linux LXC/Wayland host code out of the shipping runtime; track any guest/HAL import with its source revision and license.
 - LineageOS reference inputs: manifest/framework microG changes, ATV device tree, TvSystemUI, overlays, key layouts, and device-support requirements. Maintain these as a small rebased patch queue over AOSP, not a full platform fork.
 - Create payload-free build/test targets for `NativeBridgeProvider` descriptors so CI never requires Houdini or `libndk_translation` binaries.
-- Create payload-free build/test targets for `ServiceMode`, `GAppsProvider`, and `RootMode`. CI uses synthetic/free GApps fixtures, builds pinned KernelSU/Magisk source variants, proves a clean `NoApp + Off` artifact, and never stores proprietary GApps or unreviewed root-module payloads.
+- Create payload-free public build/test targets for `ServiceMode`, `GAppsProvider`, and `RootMode`. Public CI uses synthetic/free GApps fixtures, builds pinned KernelSU/Magisk source variants, proves a clean `NoApp + Off` artifact, and never stores proprietary GApps or unreviewed root-module payloads. Any future certified provider uses separate access-controlled licensed build infrastructure.
 
 ## Exit criteria
 

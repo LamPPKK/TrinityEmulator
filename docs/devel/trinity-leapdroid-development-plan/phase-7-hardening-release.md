@@ -47,6 +47,7 @@ Purpose: Convert feature completeness into reliable supported releases.
 - ADB, sideloading, basic accelerated graphics, single/multiple native app windows, physical keyboard/mouse, host IME, cursor capture/sync, standard controllers, text clipboard, basic notification open/update/remove, audio, lifecycle, and known-limit documentation.
 - Native app settings include Auto/Phone/Tablet and reset; Windows exposes per-app Start/taskbar identity, while macOS exposes native NSWindows and Spotlight activation with the Phase 0 Dock-identity result documented.
 - `NoApp + Off` is the preview baseline; `microG`, user-supplied GApps, KernelSU/Magisk, and user-supplied ARM-on-x64 providers are independently gated preview features with published limits. No promise of Google certification, GMS completeness, Play Integrity, DRM, banking, anti-cheat, camera, or snapshot reliability.
+- A partner-supplied `GApps + Off` artifact may enter a private certification preview only after written distribution approval, exact build identity, protected attestation provisioning, official Play Integrity server tests, licensed Widevine integration, and banking test governance exist. It is distinct from user-imported GApps.
 - TV preview follows Desktop preview and includes an open 10-foot launcher, D-pad/gamepad, 1080p SDR, initial 4K/media acceleration, and explicit codec/DRM limitations.
 
 ### Public Beta
@@ -55,6 +56,7 @@ Purpose: Convert feature completeness into reliable supported releases.
 - Feature flags allow rapid backend rollback without replacing userdata.
 - Zero telemetry, local diagnostics/manual export, first-party egress disclosure, per-app Network/Sensors controls, and process sandbox status are release features, not experimental flags.
 - `NoApp` and `microG` flows are supported first; GApps and each root/Native Bridge provider-target combination graduate individually only after legal, build/provenance, security, recovery, update, telemetry, and compatibility thresholds pass.
+- A `CertifiedPartner + Off` beta additionally requires the agreed Play Integrity verdicts, legacy SafetyNet tests where applicable, licensed DRM security-level tests, regional banking blocking matrix, OTA/reprovisioning/key-rotation exercises, and rooted/tampered negative controls. Failure removes the certified label/SKU rather than weakening a verifier.
 - TV beta requires remote-only provisioning/recovery, 250-app results, stable host decode fallback, edition-safe updates, and published per-host media/input matrices.
 
 ### General Availability
@@ -66,6 +68,7 @@ Purpose: Convert feature completeness into reliable supported releases.
 - CTS/VTS/graphics thresholds met and published internally.
 - Support policy, update cadence, deprecation policy, recovery tooling, and incident response are operational.
 - Each shipping service/root mode has independent compatibility and risk results; every production GApps/root/Native Bridge provider has upgrade, disable, safe-boot, rollback, removal, and explicit end-of-support procedures. A failed advanced provider never blocks or weakens `NoApp + Off`.
+- Any GA `CertifiedPartner + Off` SKU holds current written certification/distribution and Widevine rights, passes the exact partner-agreed Play Integrity and DRM requirements plus the published banking blocking set for four consecutive release candidates, and has incident/key-revocation procedures. User-imported GApps remains visibly uncertified.
 - Desktop GA may precede TV GA. TV reaches GA only after four consecutive candidates meet TV UI, media, accessibility, reliability, licensing, and support gates on all committed targets.
 
 ## Exit criteria
@@ -77,5 +80,5 @@ Purpose: Convert feature completeness into reliable supported releases.
 - Product can recover from GPU failure, broken snapshot, failed update, low disk, and guest boot failure without manual file deletion.
 - Windows x64, Windows ARM64, and macOS ARM64 releases are independently supportable but protocol-compatible.
 - Clean-install and upgraded production artifacts contain no telemetry client/automatic uploader; network captures have no undocumented first-party destination, and every local diagnostic export requires explicit user action.
-- Every exposed `ServiceMode`/`RootMode` passes its absence, isolation, provenance/import/build, privilege, recovery, update/rollback, packet-capture, and compatibility matrix; proprietary GApps payloads and unreviewed root modules remain absent from source, CI, and releases.
+- Every exposed `ServiceMode`/`RootMode` passes its absence, isolation, provenance/import/build, privilege, recovery, update/rollback, packet-capture, and compatibility matrix; user-imported GApps payloads and unreviewed root modules remain absent from public source, CI, and ordinary releases, while a certified payload stays inside its licensed access-controlled channel.
 - Android tasks behave as native host windows without fake chrome; per-app presentation profiles survive app/guest/host updates and cannot alter another task, Android user/profile, instance, or TV product.
